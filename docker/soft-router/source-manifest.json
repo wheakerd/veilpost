@@ -1,0 +1,185 @@
+{
+  "purpose": "Sanitized Docker configuration references; no deployment performed",
+  "files": [
+    {
+      "path": "amneziawg-3.1/.dockerignore",
+      "sha256": "316bfc55ecd1fa9495f2b5dec21479ff8c4a2014f5ec5045d3b3002132004f4b",
+      "size": 169
+    },
+    {
+      "path": "amneziawg-3.1/artifacts/packages/docker/systemd/docker.service",
+      "sha256": "c88ff9fa4ca90d27f220023f71b9f7d8eb15d9599a8c97fb6480e91f568c0862",
+      "size": 689
+    },
+    {
+      "path": "amneziawg-3.1/artifacts/packages/docker/systemd/docker.socket",
+      "sha256": "bf7d9958c4eb4f1c97b429e50e96b6c30693bfcdf7094e7fe7c1a3d300122979",
+      "size": 187
+    },
+    {
+      "path": "amneziawg-3.1/compose/compose.selinux.yaml",
+      "sha256": "5c0abf4ef4ed72d4168794c4552abc40c1033260a5c8232301437967d09bc4f0",
+      "size": 61
+    },
+    {
+      "path": "amneziawg-3.1/compose/compose.yaml",
+      "sha256": "fed5073666ef9d36aff7f1917b42c962cc40a3f1bf4723a341db34adddba630b",
+      "size": 2079
+    },
+    {
+      "path": "amneziawg-3.1/config/deployment.env.example",
+      "sha256": "2315fd06f6825e5932062ea475b49afddbcc13c2444cebf4795d1e9d09d4af43",
+      "size": 638
+    },
+    {
+      "path": "amneziawg-3.1/container/Dockerfile",
+      "sha256": "32cc2b4b4329dcd81c9f538e28de7fef63eb0df00a8fbce16e7cb8edcbf0329b",
+      "size": 3022
+    },
+    {
+      "path": "amneziawg-3.1/container/rootfs/usr/local/bin/awg-add-client",
+      "sha256": "23d477a7b20e68ab7cf40f2ae4d41fa110488a7a7352cbc74e2064010721c6d9",
+      "size": 9652
+    },
+    {
+      "path": "amneziawg-3.1/container/rootfs/usr/local/bin/awg-entrypoint",
+      "sha256": "cc4e6005995439819bb05fbbc3cd188304e33158578aa0ee123c8bc69baddfcd",
+      "size": 2104
+    },
+    {
+      "path": "amneziawg-3.1/container/rootfs/usr/local/bin/awg-firewall",
+      "sha256": "cab5d2a1aa98898e8e7d1a93dbf0404ea4d9c8203c21440791be3ac43fe186dd",
+      "size": 7995
+    },
+    {
+      "path": "amneziawg-3.1/container/rootfs/usr/local/bin/awg-healthcheck",
+      "sha256": "53da1651d3255b4dc10a60e2067154e78bfad4163493d1ed9fc453ccc94fad20",
+      "size": 885
+    },
+    {
+      "path": "amneziawg-3.1/container/rootfs/usr/local/bin/awg-init-state",
+      "sha256": "24f58ce00d21abe093cb14f81d54717c36a88a65b755bfa85fda68f4259789fe",
+      "size": 6282
+    },
+    {
+      "path": "amneziawg-3.1/container/rootfs/usr/local/bin/awg-restore-sysctls",
+      "sha256": "978572e2129998255c00ba84aa50ca8a5c59688214bb2cba45a5c090f00a4c02",
+      "size": 632
+    },
+    {
+      "path": "awg31-reality-stack/compose/awg.yaml",
+      "sha256": "b0e3c5a15f0a1a8bb4a6408593d444a9752f2f71a23363e6003077e3c4fc3d98",
+      "size": 1008
+    },
+    {
+      "path": "awg31-reality-stack/compose/xray.yaml",
+      "sha256": "17c3ff30697ed62eb2eff7cd1f8ca3f5dc3bf3f1ad3d9a1eab297d7c3aeac731",
+      "size": 1297
+    },
+    {
+      "path": "awg31-reality-stack/config/client-test-template.json",
+      "sha256": "ae0e3ff481b5b032eff1b9421a1e8f0933e37a07d1290ddc57cde51dca639c2a",
+      "size": 1281
+    },
+    {
+      "path": "awg31-reality-stack/config/daemon.json",
+      "sha256": "6b25199f4232ec254a5f3e77313bf55e7adb8b7ca67784c85d3d753d524a28e6",
+      "size": 415
+    },
+    {
+      "path": "awg31-reality-stack/config/server-template.json",
+      "sha256": "33c2a85255f5515fe87a5827c97b4e1b92c3b676f29f61fa64156d9352337135",
+      "size": 1600
+    },
+    {
+      "path": "awg31-reality-stack/config/sysctls.conf",
+      "sha256": "12bdcba2d99e229249b284fb3640f7c9ec02d88d2e8ff1c53f6bdc7087983f86",
+      "size": 148
+    },
+    {
+      "path": "awg31-reality-stack/systemd/soft-router-docker.service",
+      "sha256": "9ce009e67a550cb573ab4badb26370fa8a9405269438622a8d4bae989308ac6c",
+      "size": 583
+    },
+    {
+      "path": "chain-reuse-v1/compose/compose.production.yaml",
+      "sha256": "b516c4ac5e7ff41af75a892f71482698cfc92757b60664a412635f84e5bcd211",
+      "size": 125
+    },
+    {
+      "path": "chain-reuse-v1/compose/compose.yaml",
+      "sha256": "edd422d79c3d3955ba7a94a55310dd39ae595c25c75db28f56d9deea9a172630",
+      "size": 1027
+    },
+    {
+      "path": "reality-chain/compose/rack.yaml",
+      "sha256": "795823ac5d5f8a75ca64489ee9859342827b9a92e31f1789f33349df21a8f052",
+      "size": 928
+    },
+    {
+      "path": "wg-easy/Caddyfile",
+      "sha256": "55156383fa1e90cd8aac06675218c5d01aca5b9819d007ff62a77823af077c6a",
+      "size": 289
+    },
+    {
+      "path": "wg-easy/compose.yml",
+      "sha256": "260eeaed994cace6c8c9fe28466b8b309bb1b1e38556ae107f1bc25b81846687",
+      "size": 2137
+    },
+    {
+      "path": "wg-easy/daemon.json",
+      "sha256": "470f555e71d74d7836ecc7da12a0560eb5dd4c806ce3ecf1274be34aff76ac3d",
+      "size": 392
+    },
+    {
+      "path": "wg-easy/nft-entrypoint.sh",
+      "sha256": "df3fb554b5c0ec1f258b3dbd3fe453d232fc9767bd03c86c708a125dd8173016",
+      "size": 588
+    },
+    {
+      "path": "wg-easy/wg-easy-docker.service",
+      "sha256": "fdef5ce21b383e1f7b65d0a832abdffac6d3ddd9a0609e634c788621b023b663",
+      "size": 551
+    },
+    {
+      "path": "wire-guard/.env.example",
+      "sha256": "3e473e6ec6f2330e0c74a0628eefc8e3bc8d212b55c380fa17ea0a88a8e1e1c3",
+      "size": 325
+    },
+    {
+      "path": "wire-guard/Caddyfile",
+      "sha256": "f1fe585d6bbc7701f4bb125bdaa721f720e9696cb356684752b92892b43f47ed",
+      "size": 417
+    },
+    {
+      "path": "wire-guard/compose.bootstrap.yaml",
+      "sha256": "89b92d06c288ef152eba94eb67800364dba5c5c80608a75af4a51ecacd2e64ef",
+      "size": 258
+    },
+    {
+      "path": "wire-guard/compose.yaml",
+      "sha256": "95261722d20c364eaef10f151c3b14a54130235129c3aa77b8eb3cbdafffd3fe",
+      "size": 5278
+    },
+    {
+      "path": "wire-guard/nft-entrypoint.sh",
+      "sha256": "82b42103d979aadd3aecb82283040b3c325415d5979a5cfbc6fe6c5a1c6278ad",
+      "size": 598
+    },
+    {
+      "path": "xray-reality-shadowrocket/compose/compose.yaml",
+      "sha256": "35f687d01b715803f223a22dc38a1c7742844e7d0624be1905945df1f9494860",
+      "size": 1352
+    },
+    {
+      "path": "xray-reality-shadowrocket/config/client-test-template.json",
+      "sha256": "ae0e3ff481b5b032eff1b9421a1e8f0933e37a07d1290ddc57cde51dca639c2a",
+      "size": 1281
+    },
+    {
+      "path": "xray-reality-shadowrocket/config/server-template.json",
+      "sha256": "202fc3cf348c564c9cc4d9ca55b37e2a3b2a0c48168b7d66e1c99ce7d40b476f",
+      "size": 1796
+    }
+  ]
+}

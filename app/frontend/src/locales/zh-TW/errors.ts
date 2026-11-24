@@ -1,0 +1,46 @@
+import type { ErrorMessages } from '../zh-CN/errors'
+
+export default {
+    INVALID_CREDENTIALS: '帳號或密碼不正確，請重新輸入。',
+    INVALID_PASSWORD: '目前的密碼不正確，請重新輸入。',
+    WEAK_PASSWORD: '新密碼至少需要 12 個字元，且不得超過 256 位元組。',
+    PASSWORD_REUSED: '新密碼不能與目前的密碼相同。',
+    INVALID_CODE:
+        '驗證碼不正確、已使用或已失效，請等待驗證器顯示下一組驗證碼。',
+    INVALID_RECOVERY_CODE: '復原碼無效或已使用，請改用其他復原碼。',
+    CHALLENGE_EXPIRED: '本次驗證已逾時，請重新登入。',
+    SETUP_EXPIRED: '本次綁定已逾時，請重新開始設定。',
+    SESSION_EXPIRED: '登入狀態已失效，請重新登入。',
+    TOO_MANY_ATTEMPTS: '嘗試次數過多，請稍後再試。',
+    SERVICE_UNAVAILABLE: '驗證服務暫時無法使用，請稍後再試。',
+    REQUEST_FAILED: '操作未完成，請再試一次。',
+    INVALID_NAME: '節點名稱須為 1–64 個字元，且不能包含換行等控制字元。',
+    NODE_NOT_FOUND: '節點不存在，請重新整理列表後再試。',
+    NODE_NOT_PENDING: '節點已完成註冊或已撤銷，無法重新簽發註冊權杖。',
+    NODE_NOT_REVOKED: '只能刪除已撤銷的節點，請先撤銷。',
+    APP_NOT_FOUND: '軟體目錄中沒有這個軟體。',
+    APP_NOT_INSTALLED: '該軟體尚未安裝，請先在軟體商店中安裝。',
+    APP_ALREADY_INSTALLED: '該軟體已經安裝。',
+    APP_DEPLOYED: '該軟體已部署到節點，請先從所有節點移除後再解除安裝。',
+    INVALID_SETTING: '有設定項目的值無效，請檢查後重試。',
+    SETTING_REQUIRED: '還有必填的設定項目未填寫。',
+    UNKNOWN_SETTING: '設定中包含該軟體不支援的項目，請重新整理頁面後重試。',
+    INVALID_CREDENTIAL_NAME:
+        '憑據名稱需為 1–64 個字元，且不能包含換行等控制字元。',
+    INVALID_PROVIDER: '不支援此 DNS 服務商。',
+    INVALID_SECRETS: '憑據欄位不完整或格式不正確，請檢查後重試。',
+    CREDENTIAL_NOT_FOUND: 'DNS 服務商憑據不存在，請重新整理列表後重試。',
+    CREDENTIAL_IN_USE: '此憑據正被憑證使用，請先刪除相關憑證。',
+    CREDENTIAL_UNREADABLE: '無法讀取已保存的憑據，請重新填寫全部金鑰。',
+    CREDENTIAL_REJECTED: '服務商拒絕了此憑據，請檢查金鑰與權限。',
+    PROVIDER_UNREACHABLE: '暫時無法連線至 DNS 服務商，請稍後重試。',
+    INVALID_DOMAIN:
+        '網域格式不正確：只接受合法的 DNS 名稱，萬用字元只能寫作 *.example.com。',
+    TOO_MANY_DOMAINS: '一張憑證最多包含 100 個網域。',
+    INVALID_DIRECTORY: 'ACME 目錄位址無效，只接受 https:// 位址。',
+    INVALID_EMAIL: '聯絡信箱格式不正確。',
+    INVALID_EAB:
+        'EAB 資訊無效：僅自訂 ACME 目錄可用，且 HMAC Key 需為 base64url 編碼。',
+    CERTIFICATE_NOT_FOUND: '憑證不存在，請重新整理列表後重試。',
+    CERTIFICATE_NOT_ISSUED: '憑證尚未簽發，暫時無法下載。',
+} satisfies ErrorMessages

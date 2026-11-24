@@ -1,0 +1,4 @@
+# Apply only after the isolated candidate passes and promotion is authorized.
+services:
+  relay:
+    restart: unless-stopped

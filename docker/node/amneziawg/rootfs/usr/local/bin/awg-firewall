@@ -1,0 +1,248 @@
+#!/bin/bash
+# Install, remove, or verify the iptables chains (and optional native nftables
+# accept rules) that admit the listen port and NAT the tunnel subnets.
+set -Eeuo pipefail
+
+action=${1:-}
+interface=${AWG_INTERFACE:-awg0}
+listen_port=${AWG_LISTEN_PORT:-443}
+ipv4_subnet=${AWG_IPV4_SUBNET:-10.77.0.0/24}
+ipv6_subnet=${AWG_IPV6_SUBNET:-fd77:77:77::/64}
+require_ipv6=${AWG_REQUIRE_IPV6:-false}
+native_nft_mode=${AWG_NATIVE_NFT_MODE:-auto}
+native_nft_family=${AWG_NATIVE_NFT_FAMILY:-inet}
+native_nft_table=${AWG_NATIVE_NFT_TABLE:-filter}
+native_nft_input_chain=${AWG_NATIVE_NFT_INPUT_CHAIN:-input}
+native_nft_forward_chain=${AWG_NATIVE_NFT_FORWARD_CHAIN:-forward}
+
+v4_input=AWG_IN
+v4_forward=AWG_FWD
+v4_nat=AWG_NAT
+v6_input=AWG_IN6
+v6_forward=AWG_FWD6
+v6_nat=AWG_NAT6
+
+native_nft_input_comment=amneziawg-node-input
+native_nft_forward_egress_comment=amneziawg-node-forward-egress
+native_nft_forward_return_comment=amneziawg-node-forward-return
+
+case "$native_nft_mode" in
+  auto|required|off) ;;
+  *)
+    printf 'AWG_NATIVE_NFT_MODE must be auto, required, or off\n' >&2
+    exit 2
+    ;;
+esac
+
+for native_nft_name in \
+  "$native_nft_family" \
+  "$native_nft_table" \
+  "$native_nft_input_chain" \
+  "$native_nft_forward_chain"; do
+  [[ $native_nft_name =~ ^[a-zA-Z0-9_.-]+$ ]] || {
+    printf 'native nftables family, table, and chain names contain unsupported characters\n' >&2
+    exit 2
+  }
+done
+
+native_nft_chain_exists() {
+  local chain=$1
+  command -v nft >/dev/null 2>&1 \
+    && nft list chain "$native_nft_family" "$native_nft_table" "$chain" >/dev/null 2>&1
+}
+
+native_nft_handles() {
+  local chain=$1 marker=$2
+  nft -a list chain "$native_nft_family" "$native_nft_table" "$chain" \
+    | awk -v marker="$marker" '
+        index($0, "comment \"" marker "\"") {
+          handle_found = 0
+          for (i = 1; i <= NF; i++) {
+            if ($i == "handle") {
+              print $(i + 1)
+              handle_found = 1
+            }
+          }
+          if (!handle_found) exit 2
+        }
+      '
+}
+
+native_nft_delete_comment() {
+  local chain=$1 marker=$2 handles handle
+  handles=$(native_nft_handles "$chain" "$marker") || return 1
+  while IFS= read -r handle; do
+    [[ -n $handle ]] || continue
+    [[ $handle =~ ^[0-9]+$ ]] || return 1
+    nft delete rule "$native_nft_family" "$native_nft_table" "$chain" handle "$handle"
+  done <<<"$handles"
+}
+
+native_nft_remove_rules() {
+  command -v nft >/dev/null 2>&1 || return 0
+  if native_nft_chain_exists "$native_nft_input_chain"; then
+    native_nft_delete_comment "$native_nft_input_chain" "$native_nft_input_comment"
+  fi
+  if native_nft_chain_exists "$native_nft_forward_chain"; then
+    native_nft_delete_comment "$native_nft_forward_chain" "$native_nft_forward_egress_comment"
+    native_nft_delete_comment "$native_nft_forward_chain" "$native_nft_forward_return_comment"
+  fi
+}
+
+native_nft_add_rules() {
+  local input_exists=false forward_exists=false
+  [[ $native_nft_mode != off ]] || return 0
+  if ! command -v nft >/dev/null 2>&1; then
+    [[ $native_nft_mode != required ]] || {
+      printf 'native nftables compatibility is required but nft is unavailable\n' >&2
+      return 1
+    }
+    return 0
+  fi
+
+  native_nft_chain_exists "$native_nft_input_chain" && input_exists=true
+  native_nft_chain_exists "$native_nft_forward_chain" && forward_exists=true
+  if [[ $native_nft_mode == required && ($input_exists != true || $forward_exists != true) ]]; then
+    printf 'required native nftables input/forward chains are unavailable\n' >&2
+    return 1
+  fi
+
+  if [[ $input_exists == true ]]; then
+    nft insert rule \
+      "$native_nft_family" "$native_nft_table" "$native_nft_input_chain" \
+      udp dport "$listen_port" counter accept comment "$native_nft_input_comment"
+  fi
+  if [[ $forward_exists == true ]]; then
+    nft insert rule \
+      "$native_nft_family" "$native_nft_table" "$native_nft_forward_chain" \
+      iifname "$interface" counter accept comment "$native_nft_forward_egress_comment"
+    nft insert rule \
+      "$native_nft_family" "$native_nft_table" "$native_nft_forward_chain" \
+      oifname "$interface" ct state established,related counter accept \
+      comment "$native_nft_forward_return_comment"
+  fi
+}
+
+native_nft_rule_count() {
+  local chain=$1 marker=$2 handles
+  handles=$(native_nft_handles "$chain" "$marker") || return 1
+  if [[ -z $handles ]]; then
+    printf '0\n'
+  else
+    printf '%s\n' "$handles" | wc -l
+  fi
+}
+
+native_nft_verify_rules() {
+  local input_exists=false forward_exists=false
+  [[ $native_nft_mode != off ]] || return 0
+  if ! command -v nft >/dev/null 2>&1; then
+    [[ $native_nft_mode != required ]]
+    return
+  fi
+
+  native_nft_chain_exists "$native_nft_input_chain" && input_exists=true
+  native_nft_chain_exists "$native_nft_forward_chain" && forward_exists=true
+  if [[ $native_nft_mode == required && ($input_exists != true || $forward_exists != true) ]]; then
+    return 1
+  fi
+  if [[ $input_exists == true ]]; then
+    [[ $(native_nft_rule_count "$native_nft_input_chain" "$native_nft_input_comment") == 1 ]]
+  fi
+  if [[ $forward_exists == true ]]; then
+    [[ $(native_nft_rule_count "$native_nft_forward_chain" "$native_nft_forward_egress_comment") == 1 ]]
+    [[ $(native_nft_rule_count "$native_nft_forward_chain" "$native_nft_forward_return_comment") == 1 ]]
+  fi
+}
+
+delete_hook() {
+  local family=$1 table=$2 chain=$3 target=$4
+  while "$family" -w 5 -t "$table" -C "$chain" -j "$target" 2>/dev/null; do
+    "$family" -w 5 -t "$table" -D "$chain" -j "$target"
+  done
+}
+
+drop_chain() {
+  local family=$1 table=$2 chain=$3
+  "$family" -w 5 -t "$table" -F "$chain" 2>/dev/null || true
+  "$family" -w 5 -t "$table" -X "$chain" 2>/dev/null || true
+}
+
+remove_rules() {
+  native_nft_remove_rules
+  delete_hook iptables filter INPUT "$v4_input"
+  delete_hook iptables filter FORWARD "$v4_forward"
+  delete_hook iptables nat POSTROUTING "$v4_nat"
+  drop_chain iptables filter "$v4_input"
+  drop_chain iptables filter "$v4_forward"
+  drop_chain iptables nat "$v4_nat"
+
+  if command -v ip6tables >/dev/null 2>&1; then
+    delete_hook ip6tables filter INPUT "$v6_input"
+    delete_hook ip6tables filter FORWARD "$v6_forward"
+    delete_hook ip6tables nat POSTROUTING "$v6_nat"
+    drop_chain ip6tables filter "$v6_input"
+    drop_chain ip6tables filter "$v6_forward"
+    drop_chain ip6tables nat "$v6_nat"
+  fi
+}
+
+add_rules() {
+  remove_rules
+
+  iptables -w 5 -N "$v4_input"
+  iptables -w 5 -A "$v4_input" -p udp --dport "$listen_port" -j ACCEPT
+  iptables -w 5 -I INPUT 1 -j "$v4_input"
+
+  iptables -w 5 -N "$v4_forward"
+  iptables -w 5 -A "$v4_forward" -i "$interface" -s "$ipv4_subnet" -j ACCEPT
+  iptables -w 5 -A "$v4_forward" -o "$interface" -d "$ipv4_subnet" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+  iptables -w 5 -I FORWARD 1 -j "$v4_forward"
+
+  iptables -w 5 -t nat -N "$v4_nat"
+  iptables -w 5 -t nat -A "$v4_nat" -s "$ipv4_subnet" '!' -o "$interface" -j MASQUERADE
+  iptables -w 5 -t nat -I POSTROUTING 1 -j "$v4_nat"
+
+  if [[ $require_ipv6 == true ]]; then
+    command -v ip6tables >/dev/null 2>&1
+
+    ip6tables -w 5 -N "$v6_input"
+    ip6tables -w 5 -A "$v6_input" -p udp --dport "$listen_port" -j ACCEPT
+    ip6tables -w 5 -I INPUT 1 -j "$v6_input"
+
+    ip6tables -w 5 -N "$v6_forward"
+    ip6tables -w 5 -A "$v6_forward" -i "$interface" -s "$ipv6_subnet" -j ACCEPT
+    ip6tables -w 5 -A "$v6_forward" -o "$interface" -d "$ipv6_subnet" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+    ip6tables -w 5 -I FORWARD 1 -j "$v6_forward"
+
+    ip6tables -w 5 -t nat -N "$v6_nat"
+    ip6tables -w 5 -t nat -A "$v6_nat" -s "$ipv6_subnet" '!' -o "$interface" -j MASQUERADE
+    ip6tables -w 5 -t nat -I POSTROUTING 1 -j "$v6_nat"
+  fi
+
+  native_nft_add_rules
+}
+
+case "$action" in
+  add)
+    firewall_add_failed() {
+      local rc=$?
+      trap - ERR
+      remove_rules
+      exit "$rc"
+    }
+    trap firewall_add_failed ERR
+    add_rules
+    trap - ERR
+    ;;
+  remove)
+    remove_rules
+    ;;
+  verify-native)
+    native_nft_verify_rules
+    ;;
+  *)
+    printf 'usage: %s {add|remove|verify-native}\n' "$0" >&2
+    exit 2
+    ;;
+esac

@@ -1,0 +1,100 @@
+import type { CommonMessages } from '../zh-CN/common'
+
+export default {
+    language: {
+        self: 'English',
+        // Short label on the sign-in language switch.
+        short: 'EN',
+    },
+    app: {
+        name: 'Veilpost',
+        description: 'One console for all your self-hosted VPN nodes',
+        home: 'Veilpost home',
+    },
+    routes: {
+        login: 'Sign in',
+        verify: 'Two-step verification',
+        overview: 'Network overview',
+        nodes: 'VPN nodes',
+        appearance: 'Preferences',
+        security: 'Account security',
+        certificates: 'Certificates',
+        dnsProviders: 'DNS providers',
+        notFound: 'Page not found',
+        store: 'Store',
+        installedApp: 'Installed software',
+    },
+    shell: {
+        account: {
+            title: 'Account center',
+            open: 'Open the account center',
+            twoFactorOn: 'Two-step verification is on',
+            twoFactorOff: 'Two-step verification is off',
+        },
+        hideTabs: 'Hide the tab bar',
+        skipLink: 'Skip to main content',
+        navigation: 'Main navigation',
+        groups: {
+            workspace: 'Workspace',
+            software: 'Software',
+            security: 'Security',
+            settings: 'Settings',
+        },
+        breadcrumb: 'Console',
+        signOut: 'Sign out',
+        installedApps: 'Installed software',
+        collapse: 'Collapse sidebar',
+        expand: 'Expand sidebar',
+        refresh: 'Reload this page',
+        mode: 'Appearance: {mode}',
+        modes: { light: 'Light', dark: 'Dark', system: 'System' },
+        language: 'Interface language',
+        followBrowser: 'Follow browser',
+        preferences: 'Preferences',
+        clock: 'Local time',
+        version: 'v{version}',
+        openPages: 'Open pages',
+        closeTab: 'Close “{title}”',
+        closeOthers: 'Close others',
+    },
+    loading: {
+        title: 'Loading the console',
+        description: 'Restoring your sign-in. This only takes a moment.',
+    },
+    notFound: {
+        title: 'This page doesn’t exist',
+        description: 'Check the address, or go back to the network overview',
+        back: 'Back to network overview',
+    },
+    status: {
+        unavailable: 'Unavailable',
+        loading: 'Loading',
+        notConnected: 'None connected',
+    },
+    discard: {
+        message: 'Discard unsaved changes?',
+        confirm: 'Discard',
+        keep: 'Keep editing',
+    },
+    password: {
+        label: 'Password',
+        current: 'Current password',
+        show: 'Show',
+        hide: 'Hide',
+        showLabel: 'Show password',
+        hideLabel: 'Hide password',
+        capsLock: 'Caps Lock is on',
+    },
+    code: {
+        label: 'Verification code',
+        required: 'Enter the 6-digit verification code.',
+    },
+    actions: {
+        cancel: 'Cancel',
+        copied: 'Copied',
+        copyFailed: 'Couldn’t copy automatically. Select the text and copy it.',
+    },
+    time: {
+        justNow: 'just now',
+    },
+} satisfies CommonMessages

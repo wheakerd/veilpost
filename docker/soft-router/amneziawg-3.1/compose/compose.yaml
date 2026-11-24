@@ -1,0 +1,63 @@
+name: amneziawg31
+
+services:
+  gateway:
+    image: soft-router/amneziawg-server:3.1.20260814-r4
+    pull_policy: never
+    container_name: amneziawg31-gateway
+    network_mode: host
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - NET_BIND_SERVICE
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /run:size=16m,mode=0755
+      - /tmp:size=32m,mode=1777
+    volumes:
+      - type: bind
+        source: ${AWG_STATE_DIR:-/var/lib/amneziawg-3.1}
+        target: /var/lib/amneziawg
+    environment:
+      AWG_ENDPOINT_HOST: ${AWG_ENDPOINT_HOST:?set AWG_ENDPOINT_HOST at deployment time}
+      AWG_LISTEN_PORT: ${AWG_LISTEN_PORT:-443}
+      AWG_INTERFACE: ${AWG_INTERFACE:-awg31}
+      AWG_MTU: ${AWG_MTU:-1280}
+      AWG_SERVER_IPV4: ${AWG_SERVER_IPV4:-10.79.31.1/24}
+      AWG_CLIENT_IPV4: ${AWG_CLIENT_IPV4:-10.79.31.2/32}
+      AWG_IPV4_SUBNET: ${AWG_IPV4_SUBNET:-10.79.31.0/24}
+      AWG_SERVER_IPV6: ${AWG_SERVER_IPV6:-fd79:31:31::1/64}
+      AWG_CLIENT_IPV6: ${AWG_CLIENT_IPV6:-fd79:31:31::2/128}
+      AWG_IPV6_SUBNET: ${AWG_IPV6_SUBNET:-fd79:31:31::/64}
+      AWG_CLIENT_NAME: ${AWG_CLIENT_NAME:-router}
+      AWG_CLIENT_DNS: ${AWG_CLIENT_DNS:-1.1.1.1, 2606:4700:4700::1111}
+      AWG_REQUIRE_IPV6: ${AWG_REQUIRE_IPV6:-false}
+      AWG_NATIVE_NFT_MODE: ${AWG_NATIVE_NFT_MODE:-auto}
+      AWG_NATIVE_NFT_FAMILY: ${AWG_NATIVE_NFT_FAMILY:-inet}
+      AWG_NATIVE_NFT_TABLE: ${AWG_NATIVE_NFT_TABLE:-filter}
+      AWG_NATIVE_NFT_INPUT_CHAIN: ${AWG_NATIVE_NFT_INPUT_CHAIN:-input}
+      AWG_NATIVE_NFT_FORWARD_CHAIN: ${AWG_NATIVE_NFT_FORWARD_CHAIN:-forward}
+      LOG_LEVEL: ${AWG_LOG_LEVEL:-info}
+    restart: unless-stopped
+    stop_grace_period: 20s
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/awg-healthcheck"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"

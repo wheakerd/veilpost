@@ -1,0 +1,66 @@
+name: Release
+
+on:
+    push:
+        tags: ['v*']
+
+permissions:
+    contents: read
+
+concurrency:
+    group: release-${{ github.ref }}
+    cancel-in-progress: false
+
+jobs:
+    checks:
+        uses: ./.github/workflows/ci.yml
+        permissions:
+            contents: read
+
+    package:
+        needs: checks
+        runs-on: ubuntu-24.04
+        timeout-minutes: 30
+        env:
+            VERSION: ${{ github.ref_name }}
+            GOTOOLCHAIN: local
+            GOTELEMETRY: 'off'
+            GOCACHE: ${{ github.workspace }}/.runtime/go-build
+            GOMODCACHE: ${{ github.workspace }}/.runtime/go-mod
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  fetch-depth: 0
+                  persist-credentials: false
+            - uses: ./.github/actions/setup
+            - run: make install
+            - name: Package tagged source
+              run: make release
+            - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: release-assets
+                  path: dist/releases/${{ github.ref_name }}/*
+                  if-no-files-found: error
+                  retention-days: 14
+
+    publish:
+        needs: package
+        runs-on: ubuntu-24.04
+        timeout-minutes: 10
+        permissions:
+            contents: write
+        env:
+            VERSION: ${{ github.ref_name }}
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  fetch-depth: 0
+                  persist-credentials: false
+            - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+              with:
+                  name: release-assets
+                  path: dist/releases/${{ github.ref_name }}
+            - name: Validate and publish release assets
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: make publish

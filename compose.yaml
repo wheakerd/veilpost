@@ -1,0 +1,68 @@
+name: veilpost-dev
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      additional_contexts:
+        gomodcache: ${GO_MODULE_CACHE_CONTEXT:-./docker/backend/cache}
+    init: true
+    restart: unless-stopped
+    environment:
+      VPN_ENV: development
+      VPN_HTTP_ADDR: 0.0.0.0:8080
+      VPN_DATA_DIR: /data
+      VPN_SHUTDOWN_TIMEOUT: 10s
+      # Development only: the frontend container proxies /api from a private
+      # container network address, so its X-Forwarded-For identifies the browser.
+      VPN_TRUSTED_PROXIES: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+    ports:
+      - target: 8080
+        published: '0'
+        host_ip: 127.0.0.1
+    volumes:
+      - auth-data:/data
+    healthcheck:
+      test: ['CMD', '/usr/local/bin/veilpost-api', 'healthcheck']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    stop_grace_period: 15s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+      args:
+        LOCAL_UID: ${LOCAL_UID:-1000}
+        LOCAL_GID: ${LOCAL_GID:-1000}
+    init: true
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - target: 3000
+        published: ${FRONTEND_PORT:-3000}
+        host_ip: 127.0.0.1
+    volumes:
+      - ./app/frontend:/app/frontend:z
+      - frontend-modules:/app/frontend/node_modules
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+      start_period: 15s
+
+volumes:
+  auth-data:
+  frontend-modules:

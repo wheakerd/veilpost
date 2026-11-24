@@ -1,0 +1,36 @@
+name: chain-reuse-v1
+
+services:
+  relay:
+    image: ghcr.io/xtls/xray-core:26.3.27@sha256:4198aa816f04eeacde6470f4f07947eb4f701a1bba3657e366636681eaae5855
+    pull_policy: never
+    container_name: chain-reuse-v1
+    network_mode: host
+    user: "0:0"
+    restart: "no"
+    command: [run, -c, /usr/local/etc/xray/config.json]
+    volumes:
+      - type: bind
+        source: /var/lib/chain-reuse-v1/server/config.json
+        target: /usr/local/etc/xray/config.json
+        read_only: true
+        bind:
+          create_host_path: false
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 192m
+    cpus: 0.50
+    stop_grace_period: 10s
+    healthcheck:
+      test: [CMD, /usr/local/bin/xray, run, -test, -c, /usr/local/etc/xray/config.json]
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: none
+    labels:
+      org.soft-router.owner: chain-reuse-v1
+      org.soft-router.transport: vless-grpc-over-awg

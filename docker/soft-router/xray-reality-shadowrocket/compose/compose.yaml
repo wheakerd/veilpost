@@ -1,0 +1,55 @@
+name: xray-reality-shadowrocket
+
+services:
+  xray:
+    image: ghcr.io/xtls/xray-core:26.3.27@sha256:4198aa816f04eeacde6470f4f07947eb4f701a1bba3657e366636681eaae5855
+    container_name: xray-reality-shadowrocket
+    restart: unless-stopped
+    command:
+      - run
+      - -c
+      - /usr/local/etc/xray/config.json
+    ports:
+      - target: 443
+        published: "443"
+        protocol: tcp
+        host_ip: 0.0.0.0
+    volumes:
+      - type: bind
+        source: /var/lib/xray-reality-shadowrocket/server
+        target: /usr/local/etc/xray
+        read_only: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,mode=1777,size=16m
+      - /var/log/xray:rw,nosuid,nodev,noexec,mode=1777,size=4m
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 192m
+    cpus: 0.75
+    stop_grace_period: 10s
+    healthcheck:
+      test:
+        - CMD
+        - /usr/local/bin/xray
+        - run
+        - -test
+        - -c
+        - /usr/local/etc/xray/config.json
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "2"
+    labels:
+      org.soft-router.owner: xray-reality-shadowrocket
+      org.soft-router.transport: tcp-443

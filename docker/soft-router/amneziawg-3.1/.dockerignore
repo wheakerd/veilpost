@@ -1,0 +1,7 @@
+*
+!container/
+!container/**
+!artifacts/
+!artifacts/sources/
+!artifacts/sources/amneziawg-go-v3.1.20260814.tar.gz
+!artifacts/sources/amneziawg-tools-v3.1.20260812.tar.gz

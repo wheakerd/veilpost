@@ -1,0 +1,231 @@
+#!/bin/bash
+set -Eeuo pipefail
+
+umask 077
+
+state_dir=/var/lib/amneziawg
+interface=${AWG_INTERFACE:-awg31}
+client_name=${AWG_NEW_CLIENT_NAME:-}
+client_ipv4=${AWG_NEW_CLIENT_IPV4:-}
+client_ipv6=${AWG_NEW_CLIENT_IPV6:-}
+client_dns=${AWG_NEW_CLIENT_DNS-1.1.1.1}
+server_config="$state_dir/server/${interface}.conf"
+client_config="$state_dir/clients/${client_name}.conf"
+meta_dir="$state_dir/meta"
+lock_dir="$state_dir/.add-client.lock"
+candidate_dir=
+rollback_dir=
+lock_acquired=false
+promotion_started=false
+promotion_complete=false
+client_private=
+client_public=
+preshared_key=
+header_protection_key=
+
+die() {
+  printf 'add-client error: %s\n' "$*" >&2
+  exit 1
+}
+
+config_value() {
+  local wanted=$1
+  awk -v wanted="$wanted" '
+    function trim(value) {
+      sub(/^[[:space:]]+/, "", value)
+      sub(/[[:space:]]+$/, "", value)
+      return value
+    }
+    {
+      separator = index($0, "=")
+      if (separator == 0) next
+      name = trim(substr($0, 1, separator - 1))
+      if (name == wanted) {
+        result = trim(substr($0, separator + 1))
+        found++
+      }
+    }
+    END {
+      if (found != 1 || result == "") exit 1
+      print result
+    }
+  ' "$server_config"
+}
+
+random_u32() {
+  od -An -N4 -tu4 /dev/urandom | tr -d ' '
+}
+
+random_between() {
+  local minimum=$1 maximum=$2 value
+  value=$(random_u32)
+  printf '%s\n' "$((minimum + value % (maximum - minimum + 1)))"
+}
+
+peer_count() {
+  awg show "$interface" peers | awk '{count += NF} END {print count + 0}'
+}
+
+wait_for_health() {
+  local deadline=$((SECONDS + 20))
+  while ((SECONDS < deadline)); do
+    if /usr/local/bin/awg-healthcheck >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
+rollback_failed_promotion() {
+  local rollback_ok=true
+
+  [[ $promotion_started == true && $promotion_complete != true ]] || return 0
+  set +e
+  if [[ -n $rollback_dir && -f $rollback_dir/server.conf ]]; then
+    install -o root -g root -m 0600 "$rollback_dir/server.conf" "$server_config" || rollback_ok=false
+    rm -f -- "$client_config"
+    awg syncconf "$interface" <(awg-quick strip "$rollback_dir/server.conf") || rollback_ok=false
+    wait_for_health || rollback_ok=false
+  else
+    rollback_ok=false
+  fi
+  if [[ $rollback_ok == true ]]; then
+    printf '%s\n' 'add-client rollback restored the prior server configuration' >&2
+  else
+    printf '%s\n' 'add-client rollback did not fully restore the prior state' >&2
+  fi
+  set -e
+}
+
+cleanup() {
+  local rc=$?
+  trap - EXIT INT TERM
+  rollback_failed_promotion
+  [[ -z $candidate_dir ]] || rm -rf -- "$candidate_dir"
+  if [[ $lock_acquired == true ]]; then
+    rmdir "$lock_dir" 2>/dev/null || true
+  fi
+  unset client_private client_public preshared_key header_protection_key
+  exit "$rc"
+}
+trap cleanup EXIT INT TERM
+
+[[ $(id -u) -eq 0 ]] || die 'run inside the AWG container as root'
+[[ -d $state_dir && ! -L $state_dir ]] || die 'the private state directory is unavailable or unsafe'
+[[ $interface =~ ^[a-zA-Z0-9_.-]{1,15}$ ]] || die 'AWG_INTERFACE is invalid'
+[[ $client_name =~ ^[a-zA-Z0-9_.-]{1,15}$ ]] || die 'AWG_NEW_CLIENT_NAME must be a valid 1..15 character interface-style name'
+[[ $client_ipv4 =~ ^[0-9.]+/32$ ]] || die 'AWG_NEW_CLIENT_IPV4 must be one IPv4 /32'
+[[ $client_ipv6 =~ ^[0-9a-fA-F:]+/128$ ]] || die 'AWG_NEW_CLIENT_IPV6 must be one IPv6 /128'
+[[ $client_dns != *$'\n'* && $client_dns != *$'\r'* && $client_dns != *$'\t'* ]] || die 'AWG_NEW_CLIENT_DNS contains control whitespace'
+[[ -z $client_dns || $client_dns =~ ^[0-9a-fA-F:.,[:blank:]]+$ ]] || die 'AWG_NEW_CLIENT_DNS must contain IP literals only'
+[[ -f $server_config && ! -L $server_config ]] || die 'the active server configuration is unavailable or unsafe'
+[[ -f $meta_dir/server-public-key && -f $meta_dir/client-endpoint ]] || die 'required initialized metadata is unavailable'
+[[ ! -e $client_config && ! -L $client_config ]] || die 'the requested client profile already exists'
+ip link show dev "$interface" >/dev/null 2>&1 || die 'the AWG interface is not active'
+/usr/local/bin/awg-healthcheck >/dev/null || die 'the active AWG service is not healthy'
+grep -Fq "$client_ipv4" "$server_config" && die 'the requested IPv4 address is already assigned'
+grep -Fq "$client_ipv6" "$server_config" && die 'the requested IPv6 address is already assigned'
+
+mkdir "$lock_dir" 2>/dev/null || die 'another client mutation holds the state lock'
+lock_acquired=true
+
+server_public=$(<"$meta_dir/server-public-key")
+endpoint=$(<"$meta_dir/client-endpoint")
+[[ $server_public != *$'\n'* && $server_public =~ ^[A-Za-z0-9+/]+={0,2}$ ]] || die 'the retained server public key is malformed'
+[[ $endpoint != *$'\n'* && $endpoint =~ ^(\[[0-9a-fA-F:]+\]|[a-zA-Z0-9._-]+):[0-9]+$ ]] || die 'the retained client endpoint is malformed'
+
+mtu=$(config_value MTU) || die 'failed to read MTU from the active server configuration'
+s1=$(config_value S1) || die 'failed to read S1 from the active server configuration'
+s2=$(config_value S2) || die 'failed to read S2 from the active server configuration'
+s3=$(config_value S3) || die 'failed to read S3 from the active server configuration'
+s4=$(config_value S4) || die 'failed to read S4 from the active server configuration'
+h1=$(config_value H1) || die 'failed to read H1 from the active server configuration'
+h2=$(config_value H2) || die 'failed to read H2 from the active server configuration'
+h3=$(config_value H3) || die 'failed to read H3 from the active server configuration'
+h4=$(config_value H4) || die 'failed to read H4 from the active server configuration'
+header_protection_key=$(config_value HeaderProtectionKey) || die 'failed to read the header-protection setting'
+random_trailers=$(config_value RandomTrailers) || die 'failed to read the random-trailers setting'
+disable_cookies=$(config_value DisableCookies) || die 'failed to read the cookie setting'
+
+[[ $mtu =~ ^[0-9]+$ && $mtu -ge 1280 && $mtu -le 1420 ]] || die 'the active MTU is invalid'
+[[ $random_trailers == on && $disable_cookies == off ]] || die 'the active AWG 3.1 settings are unexpected'
+
+client_private=$(awg genkey)
+client_public=$(printf '%s\n' "$client_private" | awg pubkey)
+preshared_key=$(awg genpsk)
+jc=$(random_between 4 8)
+jmin=$(random_between 32 64)
+jmax=$(random_between 256 512)
+peer_count_before=$(peer_count)
+[[ $peer_count_before =~ ^[0-9]+$ && $peer_count_before -ge 1 ]] || die 'the current peer count is invalid'
+
+candidate_dir=$(mktemp -d "$state_dir/.add-client-candidate.XXXXXXXX")
+chmod 0700 "$candidate_dir"
+install -o root -g root -m 0600 "$server_config" "$candidate_dir/server.conf"
+cat >>"$candidate_dir/server.conf" <<EOF
+
+# Managed additional client: $client_name
+[Peer]
+PublicKey = $client_public
+PresharedKey = $preshared_key
+AllowedIPs = $client_ipv4, $client_ipv6
+EOF
+
+{
+  printf '%s\n' '[Interface]'
+  printf 'PrivateKey = %s\n' "$client_private"
+  printf 'Address = %s, %s\n' "$client_ipv4" "$client_ipv6"
+  [[ -z $client_dns ]] || printf 'DNS = %s\n' "$client_dns"
+  printf 'MTU = %s\n' "$mtu"
+  printf 'Jc = %s\nJmin = %s\nJmax = %s\n' "$jc" "$jmin" "$jmax"
+  printf 'S1 = %s\nS2 = %s\nS3 = %s\nS4 = %s\n' "$s1" "$s2" "$s3" "$s4"
+  printf 'H1 = %s\nH2 = %s\nH3 = %s\nH4 = %s\n' "$h1" "$h2" "$h3" "$h4"
+  printf 'HeaderProtectionKey = %s\n' "$header_protection_key"
+  printf 'RandomTrailers = %s\nDisableCookies = %s\n\n' "$random_trailers" "$disable_cookies"
+  printf '%s\n' '[Peer]'
+  printf 'PublicKey = %s\n' "$server_public"
+  printf 'PresharedKey = %s\n' "$preshared_key"
+  printf '%s\n' 'AllowedIPs = 0.0.0.0/0, ::/0'
+  printf 'Endpoint = %s\n' "$endpoint"
+  printf '%s\n' 'PersistentKeepalive = 25'
+} >"$candidate_dir/client.conf"
+chmod 0600 "$candidate_dir/client.conf"
+
+awg-quick strip "$candidate_dir/server.conf" >/dev/null
+awg-quick strip "$candidate_dir/client.conf" >/dev/null
+
+rollback_parent="$state_dir/rollbacks"
+[[ ! -L $rollback_parent ]] || die 'the rollback directory must not be a symlink'
+mkdir -p "$rollback_parent"
+chmod 0700 "$rollback_parent"
+rollback_dir="$rollback_parent/add-client-${client_name}-$(date -u +'%Y%m%dT%H%M%SZ')"
+mkdir "$rollback_dir"
+chmod 0700 "$rollback_dir"
+install -o root -g root -m 0600 "$server_config" "$rollback_dir/server.conf"
+printf 'client-name=%s\npeer-count-before=%s\n' "$client_name" "$peer_count_before" >"$rollback_dir/metadata"
+chmod 0600 "$rollback_dir/metadata"
+awg-quick strip "$rollback_dir/server.conf" >/dev/null
+
+# Re-apply the current configuration before promotion. This validates the same
+# target-native sync path that the bounded rollback uses.
+awg syncconf "$interface" <(awg-quick strip "$rollback_dir/server.conf")
+/usr/local/bin/awg-healthcheck >/dev/null
+[[ $(peer_count) == "$peer_count_before" ]] || die 'the rollback-path validation changed the peer set'
+
+promotion_started=true
+awg syncconf "$interface" <(awg-quick strip "$candidate_dir/server.conf")
+install -o root -g root -m 0600 "$candidate_dir/server.conf" "$server_config"
+install -o root -g root -m 0600 "$candidate_dir/client.conf" "$client_config"
+
+expected_peer_count=$((peer_count_before + 1))
+[[ $(peer_count) == "$expected_peer_count" ]] || die 'the live peer count did not increase by one'
+awg show "$interface" allowed-ips | grep -Fq "$client_ipv4" || die 'the live peer lacks the requested IPv4 address'
+awg show "$interface" allowed-ips | grep -Fq "$client_ipv6" || die 'the live peer lacks the requested IPv6 address'
+/usr/local/bin/awg-healthcheck >/dev/null
+awg-quick strip "$server_config" >/dev/null
+awg-quick strip "$client_config" >/dev/null
+promotion_complete=true
+
+printf 'additional AWG 3.1 client installed; profile retained at %s\n' "$client_config"
+printf 'rollback material retained at %s\n' "$rollback_dir"

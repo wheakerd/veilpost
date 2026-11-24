@@ -1,0 +1,765 @@
+// Sign-in: the globe fills the screen, the card sits on it, and the frame
+// carries mono readouts like an instrument display.
+.auth-shell {
+    position: relative;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    min-height: 100dvh;
+    overflow: hidden;
+    background-color: var(--app-bg);
+    background-image:
+        linear-gradient(var(--app-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--app-grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+}
+.lab-globe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+.frame-corner {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 0 solid var(--app-border-strong);
+    pointer-events: none;
+    &.top-left {
+        top: 12px;
+        left: 12px;
+        border-width: 1px 0 0 1px;
+    }
+    &.top-right {
+        top: 12px;
+        right: 12px;
+        border-width: 1px 1px 0 0;
+    }
+    &.bottom-left {
+        bottom: 12px;
+        left: 12px;
+        border-width: 0 0 1px 1px;
+    }
+    &.bottom-right {
+        bottom: 12px;
+        right: 12px;
+        border-width: 0 1px 1px 0;
+    }
+}
+.auth-top,
+.auth-bottom {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 2rem 2.5rem;
+}
+.auth-bottom {
+    align-items: center;
+    padding-block: 1.5rem;
+    > span {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+}
+.auth-brand {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 0.625rem;
+    align-items: center;
+    img {
+        border-radius: 6px;
+    }
+    strong {
+        font-weight: 500;
+        font-size: 1rem;
+    }
+    p {
+        grid-column: 1 / -1;
+        margin-top: 0.75rem;
+    }
+}
+.auth-tools {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.segmented {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--app-border-strong);
+    border-radius: 8px;
+    background: var(--app-surface);
+    button {
+        min-width: 2.25rem;
+        height: 2rem;
+        padding: 0 0.5rem;
+        border: 0;
+        border-radius: var(--app-radius-control);
+        background: transparent;
+        color: var(--app-text-secondary);
+        font: 400 0.75rem/1 var(--app-mono-font);
+        transition:
+            background-color 140ms var(--app-ease),
+            color 140ms var(--app-ease);
+        &:hover {
+            color: var(--app-text);
+        }
+        &[aria-pressed='true'] {
+            background: var(--app-raised);
+            color: var(--app-text);
+            box-shadow: inset 0 0 0 1px var(--app-border-strong);
+        }
+    }
+}
+.icon-button.framed {
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid var(--app-border-strong);
+    background: var(--app-surface);
+}
+main.auth-main {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    padding: 1rem 1.5rem;
+    max-width: none;
+}
+.auth-card {
+    position: relative;
+    width: 100%;
+    max-width: 25rem;
+    padding: 2rem;
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-panel);
+    background: var(--app-surface);
+    box-shadow: var(--app-chrome-shadow);
+    overflow: hidden;
+    > .hazard-strip {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 5rem;
+    }
+    h1 {
+        font-size: 1.5rem;
+    }
+}
+.auth-step {
+    margin-bottom: 0.75rem;
+}
+.auth-description {
+    color: var(--app-text-secondary);
+    margin-top: 0.5rem;
+}
+.auth-form {
+    display: grid;
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+}
+.key-hint {
+    margin-top: -0.5rem;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--app-muted);
+}
+kbd {
+    display: inline-block;
+    min-width: 1.5rem;
+    padding: 1px 6px;
+    margin-inline: 2px;
+    border: 1px solid var(--app-border-strong);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    background: var(--app-raised);
+    color: var(--app-text);
+    font: 400 0.6875rem/1.5 var(--app-mono-font);
+}
+.form-field {
+    display: grid;
+    gap: 0.375rem;
+    label {
+        font-size: 0.8125rem;
+        font-weight: 500;
+    }
+    // Element Plus controls fill the field at the 40px form height.
+    .el-input,
+    .el-select {
+        --el-input-height: 2.5rem;
+        width: 100%;
+    }
+    .el-select__wrapper {
+        min-height: 2.5rem;
+    }
+    small {
+        color: var(--app-muted);
+        font-size: 0.75rem;
+    }
+}
+// The show/hide toggle is a real, labelled button inside the field.
+.password-field {
+    .el-input__wrapper {
+        padding-right: 0.25rem;
+    }
+    .el-input__suffix-inner {
+        height: 100%;
+    }
+}
+.password-toggle {
+    align-self: center;
+    height: calc(100% - 0.5rem);
+    min-width: 2.75rem;
+    padding-inline: 0.625rem;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--app-primary);
+    font-size: 0.75rem;
+    &:hover {
+        background: var(--app-raised);
+    }
+    &:focus-visible {
+        outline: 2px solid var(--app-primary);
+        outline-offset: -2px;
+    }
+}
+.form-submit.el-button {
+    width: 100%;
+    min-height: 2.75rem;
+}
+.form-error,
+.form-notice {
+    border-radius: var(--app-radius-control);
+    padding: 0.625rem 0.75rem;
+    font-size: 0.8125rem;
+    overflow-wrap: anywhere;
+}
+.form-error {
+    color: var(--app-danger);
+    background: var(--app-danger-soft);
+    border: 1px solid var(--app-danger-border);
+}
+.form-notice {
+    color: var(--app-text-secondary);
+    background: var(--app-raised);
+    border: 1px solid var(--app-border);
+}
+.auth-card > .form-notice {
+    margin-top: 1rem;
+}
+.auth-help {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--app-border);
+    font-size: 0.75rem;
+    color: var(--app-muted);
+    line-height: 1.8;
+}
+.verification-window {
+    margin-top: 1rem;
+    color: var(--app-muted);
+    font-size: 0.75rem;
+    strong {
+        color: var(--app-text);
+        font: 500 0.75rem var(--app-mono-font);
+        margin-left: 0.375rem;
+    }
+}
+.verification-input input {
+    font-family: var(--app-mono-font);
+    letter-spacing: 0.14em;
+}
+.auth-alternatives {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+.session-loading {
+    display: grid;
+    place-items: center;
+    min-height: 100dvh;
+    color: var(--app-muted);
+}
+
+// Account security
+.security-panel {
+    max-width: 56rem;
+}
+.security-panel + .security-panel {
+    margin-top: 1rem;
+}
+.field-hint {
+    margin-top: -0.75rem;
+    font-size: 0.75rem;
+    color: var(--app-muted);
+}
+.security-summary p.recovery-low {
+    color: var(--app-danger);
+}
+.inline-note code {
+    user-select: all;
+}
+.security-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.security-icon {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 8px;
+    border: 1px solid var(--app-border);
+    background: var(--app-raised);
+    color: var(--app-text-secondary);
+    flex-shrink: 0;
+}
+.security-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--app-border);
+    p {
+        color: var(--app-text-secondary);
+        font-size: 0.8125rem;
+        margin-top: 0.5rem;
+        max-width: 34rem;
+    }
+}
+.security-form {
+    max-width: 27.5rem;
+}
+.form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    .el-button + .el-button {
+        margin-left: 0;
+    }
+}
+.setup-content,
+.recovery-content {
+    border-top: 1px solid var(--app-border);
+    padding-top: 1.5rem;
+    margin-top: 1.5rem;
+}
+.setup-steps {
+    padding-left: 1.5rem;
+    margin-block: 0;
+    li {
+        padding-left: 0.375rem;
+        &::marker {
+            color: var(--app-muted);
+            font-family: var(--app-mono-font);
+        }
+    }
+    h3 {
+        font-size: 0.9375rem;
+        margin: 0;
+    }
+    p {
+        margin-top: 0.375rem;
+        color: var(--app-text-secondary);
+        font-size: 0.8125rem;
+    }
+}
+.setup-credentials {
+    display: grid;
+    grid-template-columns: minmax(0, 16rem) minmax(0, 1fr);
+    align-items: center;
+    gap: 1.5rem;
+    background: var(--app-raised);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-card);
+    padding: 1.25rem;
+    margin-block: 1.25rem 1.5rem;
+    max-width: 43rem;
+}
+.setup-qr {
+    display: block;
+    width: 100%;
+    max-width: 16rem;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: contain;
+    background: white;
+    border-radius: 6px;
+    image-rendering: pixelated;
+}
+.setup-instructions {
+    display: grid;
+    min-width: 0;
+    gap: 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--app-text-secondary);
+    p {
+        margin: 0;
+    }
+}
+.setup-account {
+    display: grid;
+    gap: 0.25rem;
+    strong {
+        color: var(--app-text);
+        font-weight: 500;
+        overflow-wrap: anywhere;
+    }
+}
+.setup-manual {
+    min-width: 0;
+    summary {
+        min-height: 2.25rem;
+        align-content: center;
+        color: var(--app-primary);
+        cursor: pointer;
+        border-radius: 4px;
+    }
+    .setup-key {
+        margin-top: 0.5rem;
+    }
+}
+.setup-key {
+    display: grid;
+    gap: 0.5rem;
+    min-width: 0;
+    flex: 1;
+    font-size: 0.75rem;
+    color: var(--app-muted);
+    code {
+        font-size: 0.9375rem;
+        line-height: 1.8;
+        color: var(--app-text);
+        overflow-wrap: anywhere;
+        user-select: all;
+    }
+    .el-button {
+        justify-self: start;
+        margin-top: 0.25rem;
+    }
+}
+.recovery-content > p {
+    color: var(--app-text-secondary);
+    margin-top: 0.5rem;
+    max-width: 37.5rem;
+}
+.recovery-codes {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    max-width: 30rem;
+    padding: 1rem;
+    background: var(--app-raised);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-card);
+    code {
+        font-size: 0.8125rem;
+        overflow-wrap: anywhere;
+        user-select: all;
+    }
+}
+.save-confirmation {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-block: 1.25rem;
+    input {
+        width: 1rem;
+        height: 1rem;
+        accent-color: var(--app-primary);
+    }
+}
+.security-feedback {
+    margin-top: 1.25rem;
+}
+
+@media (max-width: 47.5rem) {
+    .auth-top {
+        padding: max(1.25rem, env(safe-area-inset-top)) min(1.25rem, 5vw) 0;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .auth-bottom {
+        padding: 1rem min(1.25rem, 5vw);
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    main.auth-main {
+        padding: 1.5rem min(1.25rem, 5vw);
+    }
+    .auth-card {
+        padding: 1.75rem min(1.25rem, 5vw);
+    }
+    .frame-corner {
+        display: none;
+    }
+    .security-summary {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .security-panel > .setting-heading {
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    .setup-credentials {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1rem;
+        padding: 1rem;
+    }
+    .setup-qr {
+        justify-self: center;
+    }
+    .recovery-codes {
+        padding: 0.75rem;
+        font-size: 0.75rem;
+    }
+}
+
+.request-progress {
+    position: fixed;
+    inset: 0 0 auto;
+    height: 2px;
+    z-index: 100;
+    overflow: hidden;
+    pointer-events: none;
+    span {
+        display: block;
+        width: 35%;
+        height: 100%;
+        background: var(--app-primary);
+        animation: request-travel 1s var(--app-ease) infinite;
+    }
+}
+@keyframes request-travel {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(390%);
+    }
+}
+.loading-state {
+    width: min(100%, 25rem);
+    padding: 2rem;
+    text-align: center;
+    border-radius: var(--app-radius-panel);
+    border: 1px solid var(--app-border);
+    background: var(--app-surface);
+    box-shadow: var(--app-shadow);
+    h1 {
+        margin-top: 1.25rem;
+        font-size: 1.25rem;
+    }
+    p {
+        margin-top: 0.5rem;
+        color: var(--app-text-secondary);
+    }
+}
+.loading-ring {
+    display: inline-block;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 2px solid var(--app-border-strong);
+    border-top-color: var(--app-primary);
+    border-radius: 50%;
+    animation: loading-turn 0.8s linear infinite;
+}
+@keyframes loading-turn {
+    to {
+        transform: rotate(360deg);
+    }
+}
+.loading-lines {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    span {
+        height: 0.5rem;
+        background: var(--app-raised);
+        border-radius: 4px;
+    }
+    span:last-child {
+        width: 65%;
+        margin-inline: auto;
+    }
+}
+.retry-connection {
+    margin-top: 0.75rem;
+    max-width: 100%;
+    height: auto;
+    white-space: normal;
+    span {
+        white-space: normal;
+        line-height: 1.5;
+    }
+}
+.setup-required {
+    margin-top: 1rem;
+    code {
+        user-select: all;
+    }
+}
+:root[data-reduced-motion='true'] .request-progress span {
+    width: 100%;
+    animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+    .request-progress span {
+        width: 100%;
+        animation: none;
+    }
+    .loading-ring {
+        animation: none;
+    }
+}
+
+// A field's label row: the name on the left, live status (Caps Lock) on the
+// right. In the sign-in frame the name turns to the primary while the field
+// is in use.
+.field-label-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+.field-status {
+    color: var(--app-warning);
+    font-size: 0.75rem;
+}
+.auth-card .form-field:focus-within label {
+    color: var(--app-primary);
+}
+.auth-card .form-field label {
+    transition: color 180ms var(--app-ease);
+}
+
+// The authenticator code is six cells drawn over the real input, which keeps
+// its label, autofill and keyboard; its own text and box are hidden.
+.code-field {
+    position: relative;
+    &.is-cells {
+        .el-input {
+            --el-input-height: 3rem;
+        }
+        .el-input__wrapper {
+            background: transparent;
+            box-shadow: none;
+        }
+        .el-input__inner {
+            color: transparent;
+            caret-color: transparent;
+        }
+    }
+}
+.code-cells {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.5rem;
+    pointer-events: none;
+}
+// Cells take a primary hairline as digits arrive; the next one is marked
+// while the field has focus.
+.code-cell {
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--app-border-strong);
+    border-radius: 1rem;
+    background: var(--app-button-fill);
+    font: 500 1.25rem var(--app-mono-font);
+    transition:
+        border-color 180ms var(--app-ease),
+        box-shadow 180ms var(--app-ease);
+    &.filled {
+        border-color: color-mix(in srgb, var(--app-primary) 60%, transparent);
+    }
+}
+.code-field:focus-within .code-cell.current {
+    border-color: var(--app-primary);
+    box-shadow: 0 0 0 3px var(--app-primary-soft);
+}
+// While the code is checked a wave runs through the cells in reading order;
+// when it passes, each lifts once.
+.code-field.is-checking .code-cell {
+    animation: code-wave 900ms var(--app-ease) infinite;
+    animation-delay: calc(var(--cell) * 80ms);
+}
+.code-field.is-passed .code-cell {
+    border-color: var(--app-positive);
+    animation: code-lift 360ms var(--app-ease) both;
+    animation-delay: calc(var(--cell) * 40ms);
+}
+@keyframes code-wave {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.45;
+    }
+}
+@keyframes code-lift {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    45% {
+        transform: translateY(-4px);
+    }
+}
+
+// Entering the console: the column dissolves, the globe gathers behind the
+// status line, and the console takes over.
+.auth-card {
+    transition:
+        opacity 260ms var(--app-ease),
+        filter 260ms var(--app-ease),
+        transform 260ms var(--app-ease);
+}
+.auth-main {
+    position: relative;
+}
+.auth-entering {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin: 0;
+    color: var(--app-text-secondary);
+    white-space: nowrap;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 260ms 120ms var(--app-ease);
+}
+.lab-globe {
+    transition:
+        transform 560ms var(--app-ease),
+        filter 560ms var(--app-ease);
+}
+.auth-shell.is-entering {
+    .auth-card {
+        opacity: 0;
+        filter: blur(6px);
+        transform: scale(0.98);
+    }
+    .auth-entering {
+        opacity: 1;
+    }
+    .lab-globe {
+        transform: scale(0.6);
+        filter: brightness(1.35);
+    }
+}

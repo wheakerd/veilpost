@@ -1,0 +1,61 @@
+{
+  "log": {
+    "access": "none",
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "tag": "socks-in",
+      "listen": "127.0.0.1",
+      "port": "__SOCKS_PORT__",
+      "protocol": "socks",
+      "settings": {
+        "auth": "noauth",
+        "udp": true
+      }
+    },
+    {
+      "tag": "dns-test-in",
+      "listen": "127.0.0.1",
+      "port": "__DNS_PORT__",
+      "protocol": "dokodemo-door",
+      "settings": {
+        "address": "1.1.1.1",
+        "port": 53,
+        "network": "udp"
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "proxy",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "__SERVER_ADDRESS__",
+            "port": "__SERVER_PORT__",
+            "users": [
+              {
+                "id": "__CLIENT_UUID__",
+                "encryption": "none",
+                "flow": "xtls-rprx-vision"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "raw",
+        "security": "reality",
+        "realitySettings": {
+          "serverName": "dl.google.com",
+          "fingerprint": "chrome",
+          "password": "__REALITY_PUBLIC_KEY__",
+          "shortId": "__SHORT_ID__",
+          "spiderX": "/"
+        }
+      }
+    }
+  ]
+}

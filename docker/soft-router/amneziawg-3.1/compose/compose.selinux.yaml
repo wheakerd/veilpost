@@ -1,0 +1,4 @@
+services:
+  gateway:
+    security_opt:
+      - label=disable

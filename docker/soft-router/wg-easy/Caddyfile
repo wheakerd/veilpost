@@ -1,0 +1,16 @@
+{
+    admin off
+    servers {
+        protocols h1 h2
+    }
+}
+
+panel.example.com {
+    encode zstd gzip
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "same-origin"
+    }
+    reverse_proxy wg-easy:51821
+}

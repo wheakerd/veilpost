@@ -1,0 +1,341 @@
+@use 'sass:color';
+@use 'sass:list';
+@use 'sass:map';
+
+// Theme palettes, in the order of the preference chips (src/theme/palettes.ts
+// holds the same ids and light colours). Each entry is
+// (primary, secondary, on-primary) for light mode, then the same for dark.
+// The primary marks actions and selection; the secondary is its partner, the
+// one figure that matters on a screen and the second tint of the backdrop.
+// On-primary is the text on a filled primary: white where it reaches 4.5:1,
+// otherwise ink. Light primaries keep 3:1 or more on white so they also read
+// as text and icons; dark variants read on the dark surface #12151b.
+$ink-light: #121418;
+$ink-dark: #0b0d11;
+$palettes: (
+    'abyss': (
+        #4b4ee6,
+        #c2289f,
+        #fff,
+        #8b8dff,
+        #f06fd4,
+        $ink-dark,
+    ),
+    'sky': (
+        #0b96d4,
+        #7048e8,
+        $ink-light,
+        #4cc3f5,
+        #a38bff,
+        $ink-dark,
+    ),
+    'emerald': (
+        #0ea57d,
+        #2f6fe8,
+        $ink-light,
+        #3ddbb0,
+        #79a6ff,
+        $ink-dark,
+    ),
+    'mist': (
+        #10a196,
+        #e2533f,
+        $ink-light,
+        #3cccc0,
+        #ff8f7d,
+        $ink-dark,
+    ),
+    'amber': (
+        #d47b00,
+        #5b46e0,
+        $ink-light,
+        #ffb347,
+        #9c8cff,
+        $ink-dark,
+    ),
+    'coral': (
+        #f3604a,
+        #0b8f8a,
+        $ink-light,
+        #ff8a75,
+        #4fd6cc,
+        $ink-dark,
+    ),
+    'rose': (
+        #dc2a66,
+        #8a3ff0,
+        #fff,
+        #ff6f9c,
+        #b18aff,
+        $ink-dark,
+    ),
+    'violet': (
+        #9b3cf0,
+        #0a95c9,
+        #fff,
+        #c08aff,
+        #5fd2ff,
+        $ink-dark,
+    ),
+);
+$default-palette: 'abyss';
+
+@mixin brand($primary, $secondary, $on-primary, $surface, $opposite) {
+    --app-primary: #{$primary};
+    --app-secondary: #{$secondary};
+    --app-on-primary: #{$on-primary};
+    --app-primary-soft: #{color.mix($primary, $surface, 10%)};
+    --app-secondary-soft: #{color.mix($secondary, $surface, 12%)};
+    // A filled primary's hover and press move away from its text colour, so
+    // the text keeps 4.5:1 in every state.
+    @if $on-primary == #fff {
+        --app-primary-hover: #{color.mix(#000, $primary, 10%)};
+        --app-primary-press: #{color.mix(#000, $primary, 20%)};
+    } @else if $surface == #fff {
+        --app-primary-hover: #{color.mix(#fff, $primary, 15%)};
+        --app-primary-press: #{color.mix(#000, $primary, 8%)};
+    } @else {
+        --app-primary-hover: #{color.mix(#fff, $primary, 12%)};
+        --app-primary-press: #{color.mix($surface, $primary, 10%)};
+    }
+    --el-color-primary: #{$primary};
+    @each $step in 3, 5, 7, 8, 9 {
+        --el-color-primary-light-#{$step}: #{color.mix(
+                $surface,
+                $primary,
+                $step * 10%
+            )};
+    }
+    --el-color-primary-dark-2: #{color.mix($opposite, $primary, 20%)};
+}
+
+@mixin palette($colors, $mode) {
+    @if $mode == light {
+        @include brand(
+            list.nth($colors, 1),
+            list.nth($colors, 2),
+            list.nth($colors, 3),
+            #fff,
+            #000
+        );
+    } @else {
+        @include brand(
+            list.nth($colors, 4),
+            list.nth($colors, 5),
+            list.nth($colors, 6),
+            #12151b,
+            #fff
+        );
+    }
+}
+
+// Cold instrument neutrals. Surfaces stay grey in both modes; color lives in
+// the accent, the status marks and the login globe.
+:root {
+    --app-bg: #eef0f3;
+    --app-sidebar: #f7f8fa;
+    --app-surface: #ffffff;
+    --app-raised: #f2f4f7;
+    --app-text: #121418;
+    --app-text-secondary: #464c57;
+    --app-muted: #5c6370;
+    --app-border: rgb(18 20 24 / 10%);
+    --app-border-strong: rgb(18 20 24 / 18%);
+    --app-grid: rgb(18 20 24 / 4.5%);
+    --app-danger: #b42318;
+    --app-danger-soft: #fdf0ef;
+    --app-danger-border: #e9ada7;
+    --app-positive: #16794c;
+    --app-warning: #9a6200;
+    --app-hazard: #f2c12e;
+    --app-hazard-ink: #15171c;
+    --app-nav-surface: var(--app-raised);
+    --app-shadow: 0 1px 2px rgb(18 20 24 / 5%);
+    --app-chrome-shadow: 0 8px 24px rgb(18 20 24 / 8%);
+    --app-font:
+        -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, 'PingFang SC',
+        'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+    --app-display-font: var(--app-font);
+    --app-mono-font:
+        'JetBrains Mono', 'SFMono-Regular', 'Cascadia Mono', 'Menlo', Consolas,
+        monospace;
+    // One radius scale: capsules for every single-line box (buttons, fields,
+    // tags, tabs), then control rows, cards and panes as their size asks.
+    --app-radius-mark: 0.25rem;
+    --app-radius-control: 0.5rem;
+    --app-radius-row: 0.625rem;
+    --app-radius-card: 0.875rem;
+    --app-radius-panel: 1rem;
+    --app-radius-pane: 1rem;
+    --app-radius-capsule: 999rem;
+    --app-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    // Apple's spring presets sampled as linear() curves: snappy settles a
+    // press, smooth carries menus and dialogs out of their source.
+    --app-spring-snappy: linear(
+        0,
+        0.054,
+        0.177,
+        0.323,
+        0.469,
+        0.599,
+        0.709,
+        0.796,
+        0.863,
+        0.913,
+        0.948,
+        0.972,
+        0.988,
+        0.997,
+        1.003,
+        1.005,
+        1.006,
+        1.006,
+        1.005,
+        1.005,
+        1.004,
+        1.003,
+        1.002,
+        1.001,
+        1
+    );
+    --app-spring-snappy-duration: 420ms;
+    --app-spring-smooth: linear(
+        0,
+        0.058,
+        0.181,
+        0.321,
+        0.456,
+        0.574,
+        0.672,
+        0.751,
+        0.813,
+        0.861,
+        0.897,
+        0.924,
+        0.945,
+        0.96,
+        0.971,
+        0.979,
+        0.985,
+        0.989,
+        0.992,
+        0.994,
+        0.996,
+        0.997,
+        0.998,
+        0.999,
+        1
+    );
+    --app-spring-smooth-duration: 515ms;
+    // iOS sheet curve (Ionic): fast start, long settle; drawers and sheets.
+    --app-ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    --el-font-family: var(--app-font);
+    --el-border-radius-base: var(--app-radius-control);
+    --el-border-radius-small: var(--app-radius-mark);
+    --el-border-radius-round: var(--app-radius-capsule);
+    --el-border-radius-small: 4px;
+    --el-font-size-base: 0.875rem;
+    --el-component-size: 2.25rem;
+    --el-component-size-large: 2.75rem;
+    --el-color-info: #5c6370;
+    @include palette(map.get($palettes, $default-palette), light);
+}
+
+:root.dark {
+    --app-bg: #0b0d11;
+    --app-sidebar: #0e1015;
+    --app-surface: #12151b;
+    --app-raised: #1a1e26;
+    --app-text: #e9ecf1;
+    --app-text-secondary: #aab1bd;
+    --app-muted: #8a92a0;
+    --app-border: rgb(233 236 241 / 9%);
+    --app-border-strong: rgb(233 236 241 / 16%);
+    --app-grid: rgb(233 236 241 / 3.5%);
+    --app-danger: #ff8f84;
+    --app-danger-soft: #2a1618;
+    --app-danger-border: #6e3a40;
+    --app-positive: #4cc38a;
+    --app-warning: #e7b94c;
+    --app-shadow: none;
+    --app-chrome-shadow: 0 8px 24px rgb(0 0 0 / 40%);
+    --el-color-info: #8a92a0;
+    --el-bg-color: var(--app-surface);
+    --el-bg-color-page: var(--app-bg);
+    --el-bg-color-overlay: var(--app-raised);
+    --el-fill-color-blank: var(--app-surface);
+    @include palette(map.get($palettes, $default-palette), dark);
+}
+
+@each $name, $colors in $palettes {
+    :root[data-theme='#{$name}'] {
+        @include palette($colors, light);
+    }
+    :root.dark[data-theme='#{$name}'] {
+        @include palette($colors, dark);
+    }
+}
+
+:root,
+:root.dark {
+    --el-text-color-primary: var(--app-text);
+    --el-text-color-regular: var(--app-text-secondary);
+    --el-text-color-secondary: var(--app-muted);
+    --el-border-color: var(--app-border-strong);
+    --el-border-color-light: var(--app-border);
+    --el-border-color-lighter: var(--app-border);
+}
+
+// Text on a filled primary comes from the palette, in both modes. Plain,
+// text and link buttons keep Element's own colours.
+:root .el-button--primary:not(.is-plain, .is-text, .is-link) {
+    --el-button-text-color: var(--app-on-primary);
+    --el-button-hover-text-color: var(--app-on-primary);
+    --el-button-hover-bg-color: var(--app-primary-hover);
+    --el-button-active-text-color: var(--app-on-primary);
+    --el-button-active-bg-color: var(--app-primary-press);
+    --el-button-disabled-text-color: var(--app-on-primary);
+}
+
+:root .el-radio-button {
+    --el-radio-button-checked-text-color: var(--app-on-primary);
+}
+
+// Semantic colours feed Element Plus too, so messages and tags match.
+:root,
+:root.dark {
+    --el-color-success: var(--app-positive);
+    --el-color-warning: var(--app-warning);
+    --el-color-danger: var(--app-danger);
+    --el-color-error: var(--app-danger);
+    --el-mask-color: rgb(11 13 17 / 28%);
+    --el-overlay-color-lighter: rgb(11 13 17 / 28%);
+}
+
+// Colour-safe vision: status pairs that stay apart under red–green colour
+// blindness (Okabe–Ito blue and vermilion), with shapes kept as the backup.
+:root[data-vision='colorSafe'] {
+    --app-positive: #0063b0;
+    --app-danger: #c2410c;
+    --app-danger-border: #ecb497;
+    --app-warning: #8a6100;
+}
+:root.dark[data-vision='colorSafe'] {
+    --app-positive: #56b4e9;
+    --app-danger: #f59e5b;
+    --app-danger-border: #7a4a2c;
+    --app-warning: #f0e442;
+}
+// Greyscale drops hue everywhere; contrast and shape carry the meaning.
+:root[data-vision='grayscale'] {
+    filter: grayscale(1);
+}
+
+// Glass preferences (src/theme/index.ts writes them): the tint mixes the
+// primary into the glass, the strength trades fill for blur. The materials
+// built from them live in styles/_glass.scss.
+:root {
+    --glass-tint: 6%;
+    --glass-opacity: 73%;
+    --glass-blur: 21px;
+}

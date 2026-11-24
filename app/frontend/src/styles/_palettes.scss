@@ -1,0 +1,86 @@
+// Theme palettes: the preference chips and anything palette-specific.
+//
+// Two columns of capsule chips, each a swatch of the palette's primary and its
+// name. The chosen chip takes a primary border, and its swatch becomes a
+// filled circle with a check in the palette's text colour. The two columns fit
+// the preferences drawer and the sheet on a 320px screen; a long name wraps.
+.palette-chips {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+.palette-chip {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    min-height: 2.5rem;
+    padding: 0.375rem 0.875rem 0.375rem 0.5rem;
+    border: 1px solid var(--app-border-strong);
+    border-radius: var(--app-radius-capsule);
+    background: var(--app-surface);
+    box-shadow: none;
+    color: var(--app-text-secondary);
+    font-size: 0.8125rem;
+    line-height: 1.3;
+    cursor: pointer;
+    // The press settles on the snappy spring; colours follow quickly.
+    transition:
+        transform var(--app-spring-snappy-duration) var(--app-spring-snappy),
+        border-color 140ms var(--app-ease),
+        background-color 140ms var(--app-ease),
+        box-shadow 140ms var(--app-ease),
+        color 140ms var(--app-ease);
+    @media (hover: hover) and (pointer: fine) {
+        &:hover {
+            background: var(--app-raised);
+            color: var(--app-text);
+        }
+    }
+    // Feedback on pointer-down, before the choice lands on release.
+    &:active {
+        transform: scale(0.97);
+        transition-duration: 100ms, 140ms, 140ms, 140ms, 140ms;
+        transition-timing-function:
+            ease-out, var(--app-ease), var(--app-ease), var(--app-ease),
+            var(--app-ease);
+    }
+    &.selected {
+        border-color: var(--app-primary);
+        box-shadow: inset 0 0 0 1px var(--app-primary);
+        color: var(--app-text);
+        font-weight: 500;
+    }
+    &:has(:focus-visible) {
+        outline: 2px solid var(--app-primary);
+        outline-offset: 2px;
+    }
+}
+.palette-swatch {
+    display: grid;
+    place-items: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--palette-swatch);
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 12%);
+    transition:
+        background-color 140ms var(--app-ease),
+        box-shadow 140ms var(--app-ease);
+    svg {
+        width: 0.75rem;
+        height: 0.75rem;
+        stroke-width: 3;
+    }
+    .selected & {
+        background: var(--app-primary);
+        box-shadow: none;
+        color: var(--app-on-primary);
+    }
+}
+.palette-name {
+    min-width: 0;
+    overflow-wrap: break-word;
+}

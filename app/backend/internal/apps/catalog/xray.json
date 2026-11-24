@@ -1,0 +1,118 @@
+{
+    "id": "xray",
+    "version": "26.11.9",
+    "name": "apps.catalog.xray.name",
+    "description": "apps.catalog.xray.description",
+    "protocols": [
+        {
+            "id": "vless-reality-vision",
+            "name": "VLESS + REALITY + Vision",
+            "transport": "tcp"
+        },
+        {
+            "id": "xhttp-reality",
+            "name": "VLESS + XHTTP + REALITY",
+            "transport": "tcp"
+        }
+    ],
+    "ports": [
+        {
+            "setting": "visionPort",
+            "protocol": "vless-reality-vision"
+        },
+        {
+            "setting": "xhttpPort",
+            "protocol": "xhttp-reality"
+        }
+    ],
+    "settings": [
+        {
+            "key": "visionPort",
+            "type": "port",
+            "label": "apps.catalog.xray.settings.visionPort.label",
+            "hint": "apps.catalog.xray.settings.visionPort.hint",
+            "required": true,
+            "default": 443
+        },
+        {
+            "key": "visionTarget",
+            "type": "hostport",
+            "label": "apps.catalog.xray.settings.visionTarget.label",
+            "hint": "apps.catalog.xray.settings.visionTarget.hint",
+            "required": true
+        },
+        {
+            "key": "visionServerName",
+            "type": "hostname",
+            "label": "apps.catalog.xray.settings.visionServerName.label",
+            "hint": "apps.catalog.xray.settings.visionServerName.hint"
+        },
+        {
+            "key": "xhttpPort",
+            "type": "port",
+            "label": "apps.catalog.xray.settings.xhttpPort.label",
+            "hint": "apps.catalog.xray.settings.xhttpPort.hint"
+        },
+        {
+            "key": "xhttpTarget",
+            "type": "hostport",
+            "label": "apps.catalog.xray.settings.xhttpTarget.label",
+            "hint": "apps.catalog.xray.settings.xhttpTarget.hint",
+            "required": true
+        },
+        {
+            "key": "xhttpServerName",
+            "type": "hostname",
+            "label": "apps.catalog.xray.settings.xhttpServerName.label",
+            "hint": "apps.catalog.xray.settings.xhttpServerName.hint"
+        },
+        {
+            "key": "xhttpPath",
+            "type": "string",
+            "label": "apps.catalog.xray.settings.xhttpPath.label",
+            "hint": "apps.catalog.xray.settings.xhttpPath.hint",
+            "minLength": 2,
+            "maxLength": 64,
+            "pattern": "^/[A-Za-z0-9._~-]+(/[A-Za-z0-9._~-]+)*$"
+        },
+        {
+            "key": "xhttpMode",
+            "type": "enum",
+            "label": "apps.catalog.xray.settings.xhttpMode.label",
+            "hint": "apps.catalog.xray.settings.xhttpMode.hint",
+            "required": true,
+            "default": "stream-one",
+            "options": [
+                {
+                    "value": "stream-one",
+                    "label": "apps.catalog.xray.settings.xhttpMode.options.streamOne"
+                },
+                {
+                    "value": "stream-up",
+                    "label": "apps.catalog.xray.settings.xhttpMode.options.streamUp"
+                },
+                {
+                    "value": "packet-up",
+                    "label": "apps.catalog.xray.settings.xhttpMode.options.packetUp"
+                }
+            ]
+        }
+    ],
+    "image": {
+        "repository": "ghcr.io/xtls/xray-core",
+        "tag": "26.11.9",
+        "digest": "sha256:9812e382e229e9ed63fd179bf1a4e3fe244c12ff3ae4fd8128745d79c87575ab",
+        "platforms": [
+            "linux/amd64",
+            "linux/arm64",
+            "linux/arm/v7",
+            "linux/arm/v6",
+            "linux/386",
+            "linux/ppc64le",
+            "linux/s390x",
+            "linux/riscv64",
+            "linux/loong64"
+        ],
+        "source": "https://github.com/XTLS/Xray-core"
+    }
+}

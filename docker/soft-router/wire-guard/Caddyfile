@@ -1,0 +1,25 @@
+{
+    admin off
+    servers {
+        protocols h1 h2
+    }
+}
+
+{$PANEL_DOMAIN} {
+    encode zstd gzip
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "same-origin"
+    }
+    reverse_proxy wg-easy:51821
+}
+
+{$TUNNEL_DOMAIN} {
+    reverse_proxy wstunnel:8080
+}
+
+http://127.0.0.1:8081 {
+    bind 127.0.0.1
+    respond /healthz "ok" 200
+}

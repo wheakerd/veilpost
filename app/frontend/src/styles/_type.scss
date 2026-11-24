@@ -1,0 +1,75 @@
+// Type is set in rem, and the root size follows the viewport: at least
+// 15px on small screens, about 16px at 1440px and at most 18px on wide ones.
+// The bounds and most of the curve are rem, so the reader's default font
+// size and page zoom still scale it; only a small share follows the width.
+html {
+    font-size: clamp(0.9375rem, 0.8125rem + 0.2083vw, 1.125rem);
+}
+
+// Element Plus sizes its text and controls in px; here they follow the root
+// as well. Its component styles load with each component, after these, so
+// every rule carries :root to win without depending on the order.
+:root {
+    --el-font-size-extra-large: 1.25rem;
+    --el-font-size-large: 1.125rem;
+    --el-font-size-medium: 1rem;
+    --el-font-size-base: 0.875rem;
+    --el-font-size-small: 0.8125rem;
+    --el-font-size-extra-small: 0.75rem;
+    --el-component-size-small: 1.5rem;
+    --el-component-size: 2rem;
+}
+:root {
+    :is(
+        .el-button--small,
+        .el-select-group__title,
+        .el-input .el-input__count,
+        .el-textarea .el-input__count,
+        .el-menu-item-group__title,
+        .el-popper,
+        .el-message-box,
+        .el-switch__core .el-switch__inner-wrapper,
+        .el-checkbox--small .el-checkbox__label,
+        .el-radio--small .el-radio__label,
+        .el-radio-button--small .el-radio-button__inner,
+        .el-dropdown-menu--small .el-dropdown-menu__item,
+        .el-form-item--small
+    ) {
+        font-size: 0.75rem;
+    }
+    :is(
+        .el-textarea__clear,
+        .el-input .el-input__clear,
+        .el-input .el-input__password,
+        .el-select,
+        .el-select__wrapper,
+        .el-dialog,
+        .el-message__content,
+        .el-switch,
+        .el-switch__label,
+        .el-switch__label *,
+        .el-checkbox,
+        .el-checkbox--large .el-checkbox__label,
+        .el-radio--large .el-radio__label,
+        .el-slider__marks-text,
+        .el-segmented,
+        .el-segmented--small,
+        .el-dropdown-menu--large .el-dropdown-menu__item,
+        .el-form-item,
+        .el-loading-spinner .el-loading-text
+    ) {
+        font-size: 0.875rem;
+    }
+    :is(.el-drawer__title, .el-segmented--large) {
+        font-size: 1rem;
+    }
+    :is(.el-menu-item [class^='el-icon'], .el-sub-menu .el-icon) {
+        font-size: 1.125rem;
+    }
+    .el-sub-menu .el-sub-menu__icon-arrow {
+        font-size: 0.75rem;
+    }
+    .el-message-box__status {
+        font-size: 1.5rem;
+    }
+}

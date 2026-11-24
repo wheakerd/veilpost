@@ -1,0 +1,32 @@
+name: reality-exit
+services:
+  xray:
+    image: sha256:4198aa816f04eeacde6470f4f07947eb4f701a1bba3657e366636681eaae5855
+    pull_policy: never
+    container_name: reality-exit
+    network_mode: host
+    user: "0:65532"
+    restart: unless-stopped
+    command: [run, -c, /usr/local/etc/xray/config.json]
+    volumes:
+      - /var/lib/soft-router-reality-exit/server:/usr/local/etc/xray:ro
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 192m
+    pids_limit: 128
+    environment:
+      GOMEMLIMIT: 128MiB
+    stop_grace_period: 15s
+    healthcheck:
+      test: [CMD, /usr/local/bin/xray, run, -test, -c, /usr/local/etc/xray/config.json]
+      interval: 20s
+      timeout: 8s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: local
+      options: {max-size: 5m, max-file: "2"}
+    labels:
+      org.soft-router.owner: reality-chain

@@ -1,0 +1,14 @@
+{
+  "data-root": "/var/lib/soft-router-docker",
+  "exec-root": "/run/soft-router-docker/exec",
+  "pidfile": "/run/soft-router-docker/docker.pid",
+  "hosts": ["unix:///run/soft-router-docker/docker.sock"],
+  "bridge": "none",
+  "iptables": false,
+  "ip6tables": false,
+  "ip-forward": false,
+  "ip-masq": false,
+  "userland-proxy": false,
+  "log-driver": "local",
+  "log-opts": {"max-size": "5m", "max-file": "2"}
+}

@@ -1,0 +1,67 @@
+#!/bin/bash
+# Container entry point: initialize state, bring the interface up with the
+# userspace amneziawg-go implementation, install firewall rules, and supervise.
+set -Eeuo pipefail
+
+state_dir=/var/lib/amneziawg
+interface=${AWG_INTERFACE:-awg0}
+config="$state_dir/server/${interface}.conf"
+require_ipv6=${AWG_REQUIRE_IPV6:-false}
+started=false
+
+die() {
+  printf 'startup error: %s\n' "$*" >&2
+  exit 1
+}
+
+shutdown() {
+  local rc=$?
+  trap - EXIT INT TERM
+  /usr/local/bin/awg-firewall remove || true
+  if [[ $started == true ]]; then
+    awg-quick down "$config" >/dev/null 2>&1 || true
+  fi
+  exit "$rc"
+}
+trap shutdown EXIT INT TERM
+
+[[ $(id -u) -eq 0 ]] || die 'container must run as root'
+[[ -c /dev/net/tun ]] || die '/dev/net/tun is not available; pass --device /dev/net/tun'
+[[ $require_ipv6 == true || $require_ipv6 == false ]] || die 'AWG_REQUIRE_IPV6 must be true or false'
+
+/usr/local/bin/awg-init-state
+
+if ip link show dev "$interface" >/dev/null 2>&1; then
+  awg-quick down "$config" >/dev/null 2>&1 || true
+fi
+ip link show dev "$interface" >/dev/null 2>&1 && die "interface $interface already exists and is not owned by this startup"
+
+ipv4_interface=$(ip -4 route show default | awk '/^default/ {for (i=1; i<=NF; i++) if ($i=="dev") {print $(i+1); exit}}')
+[[ -n $ipv4_interface ]] || die 'host has no IPv4 default route'
+[[ $(sysctl -n net.ipv4.ip_forward) == 1 ]] || die 'host IPv4 forwarding is disabled; set net.ipv4.ip_forward=1 on the host'
+
+if [[ $require_ipv6 == true ]]; then
+  ipv6_interface=$(ip -6 route show default | awk '/^default/ {for (i=1; i<=NF; i++) if ($i=="dev") {print $(i+1); exit}}')
+  [[ -n $ipv6_interface ]] || die 'host has no IPv6 default route'
+  ip -6 -o address show dev "$ipv6_interface" scope global | grep -q . || die 'host has no global IPv6 address on its default interface'
+  [[ $(sysctl -n net.ipv6.conf.all.forwarding) == 1 ]] || die 'host IPv6 forwarding is disabled; set net.ipv6.conf.all.forwarding=1 on the host'
+  if ip -6 route show default | grep -q ' proto ra'; then
+    [[ $(sysctl -n "net.ipv6.conf.${ipv6_interface}.accept_ra") == 2 ]] || die 'an IPv6 default route learned from RA requires accept_ra=2 while forwarding'
+  fi
+fi
+
+awg-quick up "$config"
+started=true
+
+/usr/local/bin/awg-firewall add
+/usr/local/bin/awg-healthcheck
+
+printf 'AmneziaWG is ready on interface %s (UDP port %s)\n' "$interface" "${AWG_LISTEN_PORT:-443}"
+
+# amneziawg-go runs in the background; exit (and let the restart policy act)
+# when its interface disappears.
+while ip link show dev "$interface" >/dev/null 2>&1; do
+  sleep 30 &
+  wait $!
+done
+die "interface $interface disappeared; amneziawg-go is no longer running"

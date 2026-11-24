@@ -1,0 +1,23 @@
+[Unit]
+Description=Dedicated Docker Engine for wg-easy
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=notify
+Environment=PATH=/opt/wg-easy/docker:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+ExecStart=/opt/wg-easy/docker/dockerd --config-file=/opt/wg-easy/daemon.json
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+RestartSec=3
+TimeoutStartSec=90
+TimeoutStopSec=90
+LimitNOFILE=infinity
+LimitNPROC=infinity
+TasksMax=infinity
+Delegate=yes
+KillMode=process
+OOMScoreAdjust=-500
+
+[Install]
+WantedBy=multi-user.target

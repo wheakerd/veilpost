@@ -1,0 +1,158 @@
+#!/bin/bash
+# Generate the AmneziaWG server state once and keep it stable afterwards.
+# Keys and obfuscation parameters are random per node; nothing is shipped
+# with the image.
+set -Eeuo pipefail
+
+umask 077
+
+# shellcheck source=../share/amneziawg/lib.sh
+. /usr/local/share/amneziawg/lib.sh
+
+state_dir=/var/lib/amneziawg
+server_dir="$state_dir/server"
+client_dir="$state_dir/clients"
+meta_dir="$state_dir/meta"
+interface=${AWG_INTERFACE:-awg0}
+client_name=${AWG_CLIENT_NAME:-client1}
+server_config="$server_dir/${interface}.conf"
+client_config="$client_dir/${client_name}.conf"
+lock_dir="$state_dir/.init.lock"
+
+die() {
+  printf 'initialization error: %s\n' "$*" >&2
+  exit 1
+}
+
+require_value() {
+  local name=$1
+  [[ -n ${!name:-} ]] || die "$name is required"
+}
+
+: "${AWG_LISTEN_PORT:=443}" "${AWG_MTU:=1280}"
+: "${AWG_SERVER_IPV4:=10.77.0.1/24}" "${AWG_CLIENT_IPV4:=10.77.0.2/32}"
+: "${AWG_SERVER_IPV6:=fd77:77:77::1/64}" "${AWG_CLIENT_IPV6:=fd77:77:77::2/128}"
+: "${AWG_CLIENT_DNS:=1.1.1.1, 2606:4700:4700::1111}"
+
+require_value AWG_ENDPOINT_HOST
+
+[[ $interface =~ ^[a-zA-Z0-9_.-]{1,15}$ ]] || die 'AWG_INTERFACE is not a valid Linux interface name'
+[[ $client_name =~ ^[a-zA-Z0-9_.-]{1,48}$ ]] || die 'AWG_CLIENT_NAME contains unsupported characters'
+[[ $AWG_LISTEN_PORT =~ ^[0-9]+$ ]] && ((AWG_LISTEN_PORT >= 1 && AWG_LISTEN_PORT <= 65535)) || die 'AWG_LISTEN_PORT must be 1..65535'
+[[ $AWG_MTU =~ ^[0-9]+$ ]] && ((AWG_MTU >= 1280 && AWG_MTU <= 1420)) || die 'AWG_MTU must be 1280..1420'
+[[ $AWG_SERVER_IPV4 =~ ^[0-9./]+$ && $AWG_CLIENT_IPV4 =~ ^[0-9.]+/32$ ]] || die 'AWG_SERVER_IPV4 or AWG_CLIENT_IPV4 is malformed'
+[[ $AWG_SERVER_IPV6 =~ ^[0-9a-fA-F:/]+$ && $AWG_CLIENT_IPV6 =~ ^[0-9a-fA-F:]+/128$ ]] || die 'AWG_SERVER_IPV6 or AWG_CLIENT_IPV6 is malformed'
+awg_validate_dns "$AWG_CLIENT_DNS" || die 'AWG_CLIENT_DNS must contain IP literals only'
+awg_validate_signature_packets || die 'AWG_CLIENT_I1..AWG_CLIENT_I5 may only use <b 0x..>, <r N>, <rd N>, <rc N> and <t> tags'
+[[ ! -L $state_dir ]] || die "$state_dir must not be a symlink"
+
+mkdir -p "$state_dir"
+chmod 0700 "$state_dir"
+endpoint=$(awg_format_endpoint "$AWG_ENDPOINT_HOST" "$AWG_LISTEN_PORT") || die 'AWG_ENDPOINT_HOST must be a host name or IP literal'
+
+if [[ -f $meta_dir/initialized ]]; then
+  [[ -f $server_config && -f $client_config && -f $meta_dir/interface && -f $meta_dir/client-name && -f $meta_dir/client-endpoint ]] \
+    || die 'partial state exists; refusing to overwrite or regenerate keys'
+  [[ $(<"$meta_dir/interface") == "$interface" ]] || die 'existing state belongs to a different interface name'
+  [[ $(<"$meta_dir/client-name") == "$client_name" ]] || die 'existing state belongs to a different initial client name'
+  [[ $(<"$meta_dir/client-endpoint") == "$endpoint" ]] || die 'existing client state uses a different public endpoint'
+  awg-quick strip "$server_config" >/dev/null
+  awg-quick strip "$client_config" >/dev/null
+  exit 0
+fi
+[[ ! -e $server_dir && ! -e $client_dir && ! -e $meta_dir ]] || die 'partial or unidentified state exists; refusing to overwrite it'
+
+mkdir "$lock_dir" 2>/dev/null || die 'another initializer holds the state lock'
+work_dir=$(mktemp -d "$state_dir/.candidate.XXXXXXXX")
+cleanup() {
+  rm -rf -- "$work_dir"
+  rmdir "$lock_dir" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+server_private=$(awg genkey)
+server_public=$(printf '%s\n' "$server_private" | awg pubkey)
+client_private=$(awg genkey)
+client_public=$(printf '%s\n' "$client_private" | awg pubkey)
+preshared_key=$(awg genpsk)
+header_protection_key=$(awg genkey)
+
+# Padding sizes. Header protection needs every S value to be at least 12.
+# S1 + 56 must differ from S2 so that the padded handshake initiation (148 + S1)
+# and response (92 + S2) never have the same length.
+s1=$(awg_random_between 48 96)
+while :; do
+  s2=$(awg_random_between 96 144)
+  ((s1 + 56 != s2)) && break
+done
+s3=$(awg_random_between 48 96)
+s4=$(awg_random_between 12 32)
+
+# Four non-overlapping message-type ranges, shuffled across the uint32 space.
+read -r h1 h2 h3 h4 < <(awg_header_ranges)
+
+jc=$(awg_random_between 4 8)
+jmin=$(awg_random_between 32 64)
+jmax=$(awg_random_between 256 512)
+
+cat >"$work_dir/server.conf" <<EOF
+[Interface]
+PrivateKey = $server_private
+Address = $AWG_SERVER_IPV4, $AWG_SERVER_IPV6
+ListenPort = $AWG_LISTEN_PORT
+MTU = $AWG_MTU
+S1 = $s1
+S2 = $s2
+S3 = $s3
+S4 = $s4
+H1 = $h1
+H2 = $h2
+H3 = $h3
+H4 = $h4
+HeaderProtectionKey = $header_protection_key
+RandomTrailers = on
+DisableCookies = off
+
+[Peer]
+PublicKey = $client_public
+PresharedKey = $preshared_key
+AllowedIPs = $AWG_CLIENT_IPV4, $AWG_CLIENT_IPV6
+EOF
+
+{
+  printf '%s\n' '[Interface]'
+  printf 'PrivateKey = %s\n' "$client_private"
+  printf 'Address = %s, %s\n' "$AWG_CLIENT_IPV4" "$AWG_CLIENT_IPV6"
+  [[ -z $AWG_CLIENT_DNS ]] || printf 'DNS = %s\n' "$AWG_CLIENT_DNS"
+  printf 'MTU = %s\n' "$AWG_MTU"
+  printf 'Jc = %s\nJmin = %s\nJmax = %s\n' "$jc" "$jmin" "$jmax"
+  printf 'S1 = %s\nS2 = %s\nS3 = %s\nS4 = %s\n' "$s1" "$s2" "$s3" "$s4"
+  printf 'H1 = %s\nH2 = %s\nH3 = %s\nH4 = %s\n' "$h1" "$h2" "$h3" "$h4"
+  awg_print_signature_packets
+  printf 'HeaderProtectionKey = %s\n' "$header_protection_key"
+  printf 'RandomTrailers = on\nDisableCookies = off\n\n'
+  printf '%s\n' '[Peer]'
+  printf 'PublicKey = %s\n' "$server_public"
+  printf 'PresharedKey = %s\n' "$preshared_key"
+  printf '%s\n' 'AllowedIPs = 0.0.0.0/0, ::/0'
+  printf 'Endpoint = %s\n' "$endpoint"
+  printf '%s\n' 'PersistentKeepalive = 25'
+} >"$work_dir/client.conf"
+
+awg-quick strip "$work_dir/server.conf" >/dev/null
+awg-quick strip "$work_dir/client.conf" >/dev/null
+
+mkdir -p "$server_dir" "$client_dir" "$meta_dir"
+chmod 0700 "$server_dir" "$client_dir" "$meta_dir"
+mv "$work_dir/server.conf" "$server_config"
+mv "$work_dir/client.conf" "$client_config"
+printf '%s\n' "$server_public" >"$meta_dir/server-public-key"
+cp /usr/local/share/amneziawg/versions "$meta_dir/versions"
+printf '%s\n' "$endpoint" >"$meta_dir/client-endpoint"
+printf '%s\n' "$interface" >"$meta_dir/interface"
+printf '%s\n' "$client_name" >"$meta_dir/client-name"
+date -u +'%Y-%m-%dT%H:%M:%SZ' >"$meta_dir/initialized"
+chmod 0600 "$server_config" "$client_config" "$meta_dir"/*
+
+unset server_private client_private preshared_key header_protection_key
+printf 'initialized AmneziaWG state; initial client profile retained at %s\n' "$client_config"

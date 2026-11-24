@@ -1,0 +1,16 @@
+.git
+.runtime
+**/node_modules
+**/dist
+**/bin
+**/test-results
+**/playwright-report
+**/__pycache__
+**/.env
+**/.env.*
+!**/.env.example
+**/data
+**/private
+**/*.key
+**/*.pem
+docker/soft-router

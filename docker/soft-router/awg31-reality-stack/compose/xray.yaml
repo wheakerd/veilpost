@@ -1,0 +1,38 @@
+name: xray-reality-shadowrocket
+services:
+  xray:
+    image: ${XRAY_IMAGE:?image identity required}
+    pull_policy: never
+    container_name: xray-reality-shadowrocket
+    network_mode: host
+    # Host networking inherits AlmaLinux's privileged-port boundary. With this
+    # image's default non-root UID, NET_BIND_SERVICE is not effective at exec.
+    # UID 0 retains only this one capability; the root filesystem stays read-only.
+    user: "0:65532"
+    command: [run, -c, /usr/local/etc/xray/config.json]
+    volumes:
+      - /var/lib/xray-reality-shadowrocket/server:/usr/local/etc/xray:ro
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,mode=1777,size=8m
+      - /var/log/xray:rw,nosuid,nodev,noexec,mode=1777,size=4m
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: [no-new-privileges:true]
+    environment:
+      GOMEMLIMIT: 96MiB
+    pids_limit: 128
+    mem_limit: 160m
+    restart: unless-stopped
+    stop_grace_period: 10s
+    healthcheck:
+      test: [CMD, /usr/local/bin/xray, run, -test, -c, /usr/local/etc/xray/config.json]
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: local
+      options: {max-size: 5m, max-file: "2"}
+    labels:
+      org.soft-router.owner: awg31-reality-stack

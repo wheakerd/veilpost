@@ -1,0 +1,140 @@
+# Standard Docker Engine + Compose; no private daemon or host service units.
+name: ${PROJECT_NAME:-wire-guard}
+x-logging: &logging
+  driver: json-file
+  options: {max-size: 10m, max-file: "3"}
+x-labels: &labels
+  io.soft-router.bundle: wire-guard-standard-v1
+services:
+  wg-easy:
+    image: ${PROJECT_NAME:-wire-guard}-wg-easy:15.4.0-source
+    pull_policy: never
+    build:
+      context: ${WG_SOURCE_DIR:-https://github.com/wg-easy/wg-easy.git#2f9751e302acf78fd560417fd2dfbf224b2174c8}
+    platform: linux/amd64
+    labels: *labels
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/opt/wg-easy/nft-entrypoint.sh"]
+    command: ["/usr/bin/dumb-init", "node", "server/index.mjs"]
+    environment:
+      PORT: "51821"
+      HOST: "0.0.0.0"
+      INSECURE: "false"
+      DISABLE_VERSION_CHECK: "true"
+      DEBUG: ""
+      EXPERIMENTAL_AWG: "true"
+      OVERRIDE_AUTO_AWG: "awg"
+      DISABLE_IPV6: "true"
+      INIT_ENABLED: "false"
+    cap_add: [NET_ADMIN]
+    devices: ["/dev/net/tun:/dev/net/tun:rwm"]
+    sysctls:
+      net.ipv4.ip_forward: "1"
+      net.ipv4.conf.all.src_valid_mark: "1"
+      net.ipv6.conf.all.forwarding: "0"
+    volumes:
+      - type: bind
+        source: ${WG_EASY_DATA_ROOT:?Run manage.py init first}/wireguard
+        target: /etc/wireguard
+        bind: {create_host_path: false, selinux: Z}
+      - type: bind
+        source: ./nft-entrypoint.sh
+        target: /opt/wg-easy/nft-entrypoint.sh
+        read_only: true
+        bind: {create_host_path: false, selinux: Z}
+    ports: ["0.0.0.0:443:51821/udp"]
+    networks:
+      wg:
+        ipv4_address: ${WG_ADDRESS:?Set WG_ADDRESS}
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "awg show interfaces | grep -qx wg0 && node -e \"require('http').get('http://127.0.0.1:51821/',r=>process.exit(r.statusCode<400?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    logging: *logging
+  wstunnel:
+    image: ${PROJECT_NAME:-wire-guard}-wstunnel:11.1.0-source
+    pull_policy: never
+    build:
+      context: ${WS_SOURCE_DIR:-https://github.com/erebe/wstunnel.git#d1bc22c48a26f29d87d2c8de1d09a018e602b7fa}
+      dockerfile_inline: |
+        FROM docker.io/library/rust:1.97-trixie@sha256:b1b3c9c0d921d7fa0a6d1f9ec7e4eab87f8c8ec97644c3d791450f131dec813f AS build
+        ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse CARGO_HTTP_TIMEOUT=60 CARGO_NET_RETRY=0 CARGO_HTTP_MULTIPLEXING=false
+        WORKDIR /src
+        COPY . .
+        RUN cargo build --locked --release --jobs 1 --no-default-features --features ring --package wstunnel-cli --bin wstunnel
+        FROM docker.io/library/debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2
+        COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+        COPY --from=build /src/target/release/wstunnel /usr/local/bin/wstunnel
+        COPY --from=build /src/LICENSE /usr/share/doc/wstunnel/LICENSE
+        RUN /bin/bash --version >/dev/null
+        USER 1000:1000
+        ENTRYPOINT ["/usr/local/bin/wstunnel"]
+    platform: linux/amd64
+    labels: *labels
+    restart: unless-stopped
+    user: "1000:1000"
+    init: true
+    depends_on:
+      wg-easy: {condition: service_healthy}
+    command: ["server", "--log-lvl", "WARN", "--restrict-config", "/etc/wstunnel/restrictions.yaml", "ws://0.0.0.0:8080"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      - type: bind
+        source: ${WG_EASY_DATA_ROOT:?Run manage.py init first}/wstunnel/restrictions.yaml
+        target: /etc/wstunnel/restrictions.yaml
+        read_only: true
+        bind: {create_host_path: false, selinux: Z}
+    networks: [wg]
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "bash", "-ec", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    logging: *logging
+  caddy:
+    image: docker.io/library/caddy:2.11.7@sha256:24ec7b05bc532c7bb57f727030c5056e257ff7138b4b50460306819ff79362bd
+    platform: linux/amd64
+    labels: *labels
+    restart: unless-stopped
+    depends_on:
+      wg-easy: {condition: service_healthy}
+      wstunnel: {condition: service_healthy}
+    environment:
+      PANEL_DOMAIN: ${PANEL_DOMAIN:?Set PANEL_DOMAIN}
+      TUNNEL_DOMAIN: ${TUNNEL_DOMAIN:?Set TUNNEL_DOMAIN}
+    ports: ["0.0.0.0:80:80/tcp", "0.0.0.0:443:443/tcp"]
+    volumes:
+      - type: bind
+        source: ./Caddyfile
+        target: /etc/caddy/Caddyfile
+        read_only: true
+        bind: {create_host_path: false, selinux: Z}
+      - type: bind
+        source: ${WG_EASY_DATA_ROOT:?Run manage.py init first}/caddy-data
+        target: /data
+        bind: {create_host_path: false, selinux: Z}
+      - type: bind
+        source: ${WG_EASY_DATA_ROOT:?Run manage.py init first}/caddy-config
+        target: /config
+        bind: {create_host_path: false, selinux: Z}
+    networks: [wg]
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:8081/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    logging: *logging
+networks:
+  wg:
+    driver: bridge
+    enable_ipv6: false
+    ipam:
+      config:
+        - subnet: ${DOCKER_SUBNET:?Set DOCKER_SUBNET}

@@ -1,0 +1,80 @@
+{
+    "id": "hysteria2",
+    "version": "2.14.0",
+    "name": "apps.catalog.hysteria2.name",
+    "description": "apps.catalog.hysteria2.description",
+    "protocols": [
+        {
+            "id": "hysteria2",
+            "name": "Hysteria 2",
+            "transport": "udp"
+        }
+    ],
+    "ports": [
+        {
+            "setting": "port",
+            "protocol": "hysteria2"
+        }
+    ],
+    "settings": [
+        {
+            "key": "port",
+            "type": "port",
+            "label": "apps.catalog.hysteria2.settings.port.label",
+            "hint": "apps.catalog.hysteria2.settings.port.hint",
+            "required": true,
+            "default": 443
+        },
+        {
+            "key": "obfuscation",
+            "type": "enum",
+            "label": "apps.catalog.hysteria2.settings.obfuscation.label",
+            "hint": "apps.catalog.hysteria2.settings.obfuscation.hint",
+            "required": true,
+            "default": "masquerade",
+            "options": [
+                {
+                    "value": "masquerade",
+                    "label": "apps.catalog.hysteria2.settings.obfuscation.options.masquerade"
+                },
+                {
+                    "value": "salamander",
+                    "label": "apps.catalog.hysteria2.settings.obfuscation.options.salamander"
+                }
+            ]
+        },
+        {
+            "key": "masqueradeUrl",
+            "type": "url",
+            "label": "apps.catalog.hysteria2.settings.masqueradeUrl.label",
+            "hint": "apps.catalog.hysteria2.settings.masqueradeUrl.hint",
+            "requiredWhen": {
+                "setting": "obfuscation",
+                "equals": "masquerade"
+            }
+        },
+        {
+            "key": "salamanderPassword",
+            "type": "string",
+            "label": "apps.catalog.hysteria2.settings.salamanderPassword.label",
+            "hint": "apps.catalog.hysteria2.settings.salamanderPassword.hint",
+            "sensitive": true,
+            "minLength": 16,
+            "maxLength": 128,
+            "requiredWhen": {
+                "setting": "obfuscation",
+                "equals": "salamander"
+            }
+        }
+    ],
+    "image": {
+        "repository": "docker.io/tobyxdd/hysteria",
+        "tag": "v2.14.0",
+        "digest": "sha256:b15cedc3de200ae7a4f177908a83ef23ed3de2935458b22b7d46a7a8697038a9",
+        "platforms": [
+            "linux/amd64",
+            "linux/arm64"
+        ],
+        "source": "https://github.com/apernet/hysteria"
+    }
+}

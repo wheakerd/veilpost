@@ -1,0 +1,182 @@
+// Software store and installed app pages. The sidebar's installed group is
+// styled in index.scss with the rest of the navigation.
+
+.store-note {
+    color: var(--app-text-secondary);
+    font-size: 0.8125rem;
+    margin-top: 0.5rem;
+}
+.app-list {
+    list-style: none;
+    margin: 1.25rem -1.5rem 0;
+    padding: 0;
+    border-top: 1px solid var(--app-border);
+}
+.app-item {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--app-border);
+    &:last-child {
+        border-bottom: 0;
+    }
+    .node-action {
+        align-items: center;
+    }
+}
+.app-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    .el-tag {
+        flex-shrink: 0;
+    }
+}
+.app-title {
+    display: grid;
+    gap: 0.125rem;
+    min-width: 0;
+    flex: 1;
+    h3 {
+        margin: 0;
+        font-size: 0.9375rem;
+        overflow-wrap: anywhere;
+    }
+    small {
+        color: var(--app-muted);
+        font: 0.75rem var(--app-mono-font);
+    }
+}
+.app-description {
+    color: var(--app-text-secondary);
+    font-size: 0.8125rem;
+    line-height: 1.7;
+    max-width: 52rem;
+}
+.app-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
+    gap: 0.75rem 1.5rem;
+    margin: 0;
+    font-size: 0.75rem;
+    > div {
+        min-width: 0;
+    }
+    dt {
+        color: var(--app-muted);
+    }
+    dd {
+        margin: 0.25rem 0 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem 0.75rem;
+        overflow-wrap: anywhere;
+    }
+    .app-image {
+        grid-column: 1 / -1;
+    }
+    code {
+        color: var(--app-text-secondary);
+        overflow-wrap: anywhere;
+        word-break: break-all;
+    }
+    a {
+        color: var(--app-primary);
+    }
+}
+.app-chip {
+    font-family: var(--app-mono-font);
+    color: var(--app-text);
+    white-space: nowrap;
+}
+.app-manage-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0.25rem 0.75rem;
+    border: 1px solid var(--app-border-strong);
+    border-radius: var(--app-radius-control);
+    color: var(--app-text);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    &:hover {
+        background: var(--app-raised);
+    }
+}
+
+.app-panel + .app-panel {
+    margin-top: 1rem;
+}
+.app-settings {
+    max-width: 36rem;
+    margin-top: 1.25rem;
+    input[aria-invalid='true'],
+    select[aria-invalid='true'] {
+        border-color: var(--app-danger);
+    }
+}
+.field-required {
+    margin-left: 0.5rem;
+    color: var(--app-muted);
+    font: 400 0.6875rem var(--app-mono-font);
+    vertical-align: middle;
+}
+.secret-state {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    .el-button + .el-button {
+        margin-left: 0;
+    }
+}
+.secret-clearing {
+    color: var(--app-danger);
+}
+.app-select {
+    width: 100%;
+}
+.deploy-state {
+    position: relative;
+    border-top: 1px solid var(--app-border);
+    padding-top: 1.25rem;
+    margin-top: 1.25rem;
+    display: grid;
+    gap: 0.75rem;
+    justify-items: start;
+    h3 {
+        margin: 0;
+        font-size: 0.875rem;
+    }
+    p {
+        color: var(--app-text-secondary);
+        font-size: 0.8125rem;
+        max-width: 40rem;
+    }
+    form {
+        margin-top: 0;
+        justify-self: stretch;
+    }
+}
+.app-guidance .form-notice {
+    max-width: 35rem;
+}
+.app-loading {
+    padding: 3rem 0;
+}
+
+@media (max-width: 47.5rem) {
+    .app-list {
+        margin-inline: calc(-1 * min(1rem, 4vw));
+    }
+    .app-item {
+        padding-inline: min(1rem, 4vw);
+    }
+    // Secondary destinations read as quiet links beside the brand row.
+    .installed-link {
+        min-height: 2.75rem;
+        padding: 0 0.5rem;
+        font-size: 0.8125rem;
+    }
+}

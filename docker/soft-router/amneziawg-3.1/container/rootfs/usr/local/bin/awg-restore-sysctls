@@ -1,0 +1,22 @@
+#!/bin/bash
+set -Eeuo pipefail
+
+state_file=/var/lib/amneziawg/host-state/sysctls.tsv
+[[ -f $state_file ]] || {
+  printf 'no captured host sysctl state exists\n' >&2
+  exit 1
+}
+
+while IFS=$'\t' read -r key value; do
+  [[ $key =~ ^net\.(core\.(rmem_max|wmem_max)|ipv4\.ip_forward|ipv6\.conf\.[a-zA-Z0-9_.-]+\.(accept_ra|forwarding))$ ]] || {
+    printf 'refusing unexpected sysctl key: %s\n' "$key" >&2
+    exit 1
+  }
+  [[ $value =~ ^[0-9]+$ ]] || {
+    printf 'refusing unexpected sysctl value for %s\n' "$key" >&2
+    exit 1
+  }
+  sysctl -q -w "$key=$value"
+done <"$state_file"
+
+printf 'restored captured host forwarding sysctls\n'

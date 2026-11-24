@@ -1,0 +1,49 @@
+{
+    "id": "amneziawg",
+    "version": "3.1.20261116",
+    "name": "apps.catalog.amneziawg.name",
+    "description": "apps.catalog.amneziawg.description",
+    "protocols": [
+        {
+            "id": "amneziawg",
+            "name": "AmneziaWG 2.0",
+            "transport": "udp"
+        }
+    ],
+    "ports": [
+        {
+            "setting": "port",
+            "protocol": "amneziawg"
+        }
+    ],
+    "settings": [
+        {
+            "key": "port",
+            "type": "port",
+            "label": "apps.catalog.amneziawg.settings.port.label",
+            "hint": "apps.catalog.amneziawg.settings.port.hint"
+        },
+        {
+            "key": "mtu",
+            "type": "integer",
+            "label": "apps.catalog.amneziawg.settings.mtu.label",
+            "hint": "apps.catalog.amneziawg.settings.mtu.hint",
+            "required": true,
+            "default": 1280,
+            "min": 1280,
+            "max": 1420
+        },
+        {
+            "key": "requireIpv6",
+            "type": "boolean",
+            "label": "apps.catalog.amneziawg.settings.requireIpv6.label",
+            "hint": "apps.catalog.amneziawg.settings.requireIpv6.hint",
+            "required": true,
+            "default": false
+        }
+    ],
+    "image": {
+        "build": "docker/node/amneziawg",
+        "source": "https://github.com/amnezia-vpn/amneziawg-go"
+    }
+}

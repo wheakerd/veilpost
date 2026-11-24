@@ -1,0 +1,87 @@
+# Veilpost backend
+
+English | [简体中文](README.zh-CN.md)
+
+Go 1.27.4 + Gin 1.12.0, using a pure Go SQLite driver so it builds without CGO. The authentication API, node enrollment and the control channel (phase 1 of the node design), the software store (built-in catalog and installation state), and certificates and DNS provider credentials (ACME / DNS-01) are implemented. There are no default accounts, mocks, or development endpoints that bypass sign-in.
+
+## Starting and creating an account
+
+The recommended way is to run `make start` in the repository root, which starts the frontend and backend through Compose. On first deployment, run `make admin-create` in a local terminal and enter a username and password; in a non-interactive environment a random password is generated automatically and the username defaults to `admin`. You can also run `make admin-create GENERATE_PASSWORD=1 USERNAME=admin` explicitly. Usernames are 3–64 ASCII letters, digits, dots, underscores, or hyphens; passwords are at least 12 characters and at most 256 UTF-8 bytes.
+
+Administrator initialization uses `scripts/admin-create.sh` and does not depend on Python. The generated password comes from the system `openssl rand -hex 32` (64 hexadecimal characters, 256 bits of random entropy). If OpenSSL/coreutils are missing, the script detects the Linux distribution, installs them through apt-get, dnf/yum, apk, pacman, or zypper, and continues; this requires root or a usable sudo. The password is passed to the backend on standard input and saved to a text file under the Git-ignored `.runtime/admin-credentials/`, with directory permissions `700` and file permissions `600`; the terminal only prints the file location. Save the password to a password manager and then delete the plaintext file. Each generation uses a separate file and never overwrites existing credentials; if creation fails or the result is unclear, the file is kept, and the script does not retry automatically or reset an existing account.
+
+For native deployment, use `VPN_API_BIN=/path/veilpost-api VPN_DATA_DIR=/path/data GENERATE_PASSWORD=1 sh scripts/admin-create.sh`; `VPN_DATA_DIR` must match the running service. `VPN_CREDENTIALS_DIR` sets the directory for the password file. Production release packages include a standalone `admin-create.sh` that can be run directly.
+
+Native start:
+
+```bash
+VPN_ENV=development VPN_DATA_DIR=../../.runtime/backend-data make run
+```
+
+To create an account natively, pass the password on standard input to `bin/veilpost-api admin-create --username <username> --password-stdin`; do not put the password on the command line, in environment variables, or in repository files. Only a local user with access to the data directory can run this command; there is no public registration endpoint.
+
+The local recovery commands also accept a password only on standard input, and they revoke all sessions of the account:
+
+- `veilpost-api admin-reset-password --username <username> --password-stdin`: replaces a forgotten password.
+- `veilpost-api admin-reset-two-factor --username <username>`: removes a lost verifier and all recovery codes; fails if the account does not have two-step verification enabled.
+
+The root equivalents are `make admin-reset-password` and `make admin-reset-two-factor` (optionally with `USERNAME=` and `GENERATE_PASSWORD=1`), which call `scripts/admin-create.sh` with `ADMIN_ACTION=reset-password` / `reset-two-factor`; credentials are handled the same way as when creating an account.
+
+## Persistence and security boundaries
+
+- `auth.sqlite` stores users, Argon2id password hashes, session hashes, pending binding data, recovery code hashes, and rate limit counters; nodes (name, status, Ed25519 public key, agent version, last contact time), SHA-256 hashes of enrollment tokens, and agent request nonces; and installed apps (`installed_apps`: catalog version, settings JSON, installation and modification times). Node private keys are stored only on the nodes; apps that are not installed have no stored settings. The certificate feature stores DNS provider credentials, ACME accounts, and certificates (see below).
+- The database version is recorded in `PRAGMA user_version` (currently 4: v3 software store, v4 certificates and DNS providers); at startup, pending migrations run in order inside a write-locked transaction, and the service refuses to start on a database with a newer version.
+- `master.key` is a random 32-byte key generated on first initialization, with permissions 0600. TOTP secrets and sensitive app settings are stored encrypted with AES-GCM; other packages use the key through `Seal` / `Unseal` in `auth`, with associated data bound to a purpose (`apps:<id>:<setting>` for app settings), so ciphertext cannot be moved to another record or field. If the database exists but the key is missing, the service refuses to start; the key cannot be reset automatically.
+- Cookie session tokens are random 256-bit values, and the database stores only their SHA-256; a full session is valid for eight hours, and the pending verification and binding flows for five minutes.
+- Password sign-in and completing verification both rotate the token; enabling or disabling two-step verification and changing the password revoke other sessions. Users can also sign out other sessions on the Account security page.
+- TOTP uses SHA-1, six digits, and 30 seconds, accepts one adjacent time window, and does not accept the same time step twice; recovery codes are consumed once inside a transaction, and their plaintext is returned only when enabling succeeds.
+- Sign-in is rate-limited at three levels: by client address, by account and address combined, and by account; one-time code and recovery code verification is rate-limited by challenge and by account; security settings are rate-limited by session. Counters are persisted and are not reset when the process restarts. The client address trusts `X-Forwarded-For` only when forwarded by proxies listed in `VPN_TRUSTED_PROXIES`, and otherwise uses the TCP peer address; this must be configured when deployed behind a reverse proxy, or all requests share the proxy address's quota.
+- Node enrollment tokens are random 256-bit values, valid for 15 minutes, single-use, and returned in plaintext only in the creation response. Agent requests carry Ed25519 signatures (over the node ID, timestamp, nonce, method, path, and request body hash); requests with a clock skew over 60 seconds are rejected, and nonces are deduplicated within the validity window; signatures stop working immediately after revocation. `/api/agent/*` is rate-limited per node (120 requests per 5 minutes), and enrollment per client address (30 requests per 5 minutes), independently of the sign-in quotas.
+- The app catalog is packaged into the binary with `embed` (`internal/apps/catalog/*.json`) and strictly validated at startup; an invalid manifest prevents startup. Remote app sources are not supported. Published images are pinned by multi-architecture index digest, and AmneziaWG points to the local build in this repository's `docker/node/amneziawg`.
+- `/api/apps/*` follows the session authentication and write request rules; settings are strictly validated against the manifest (unknown fields and out-of-range values are rejected), sensitive settings are write-only, and no endpoint returns their plaintext. Uninstalling requires re-entering the current password, shares the per-session rate limit with account security operations, and deletes all settings; if the app is deployed to a node, it returns `409 APP_DEPLOYED` (this does not occur before node phase 2).
+- `/api/nodes/*` follows the session authentication and write request rules; creating, revoking, reissuing a token for an unenrolled node, and deleting a revoked node all require re-entering the current password, and share the per-session rate limit with account security operations.
+- Expired sessions, pending binding state, rate limit counters, enrollment tokens, and agent nonces are cleaned up at startup and every hour afterward.
+- All fields of `dns_credentials` (as a single JSON value), the account private keys and temporary EAB of `acme_accounts`, and the certificate private keys of `certificates` are encrypted with `master.key` using AES-256-GCM (`auth.Service.Seal`), with associated data bound to the purpose and record ID, so ciphertext cannot be reused for another record. The API returns only whether each credential field is set and the modification time, and never returns credentials, account private keys, or certificate private keys; certificate chains (public information) are stored in plaintext and can be downloaded through the API. The EAB is deleted after the ACME account registers successfully.
+- `/api/dns-credentials/*` and `/api/certificates/*` follow the session authentication and write request rules; adding, changing, and deleting credentials require re-entering the current password, and credentials referenced by a certificate cannot be deleted. Credential verification is rate-limited per session (10 requests per 5 minutes), and certificate requests and reissues per session (20 requests per 10 minutes).
+- Certificate issuance and renewal run in the background in a separate scheduler in `internal/certs` (at most 2 concurrent tasks), not merged with the hourly authentication cleanup loop: it needs cancellable tasks, queues a task immediately after a request, and waits for tasks to exit on shutdown. At startup and every hour afterward it checks expiry and renewal: certificates are renewed 30 days before expiry (certificates valid for less than 90 days when one third of their lifetime remains), and failures back off for 1, 2, 4, 8, 16, and 24 hours; a failed first issuance is not retried automatically. Graceful shutdown or deleting a certificate cancels the running task (ACME requests are bound to the task context); interrupted tasks do not record an error and continue at the next startup, and shutdown waits at most `VPN_SHUTDOWN_TIMEOUT`.
+- Issuance errors store only the error category, the time, and the type and short description of the ACME problem document (at most 300 characters); error text returned by DNS providers is never stored or logged. lego's logs are discarded, and background task logs contain only the error category, without domains, credentials, or tokens.
+- Browser write requests require JSON, a same-origin Origin, and `X-Requested-With: Veilpost`; credentialed CORS is not enabled. The agent API does not use cookies and authenticates by signature. All API responses carry `Cache-Control: no-store`.
+- Cookies always use HttpOnly, SameSite=Strict, and Path=/; production mode additionally enforces Secure and requires an HTTPS Origin.
+- Logs record only the route template, method, status, and duration, never passwords, binding secrets, recovery codes, enrollment tokens, node IDs, app identifiers, setting values, public keys, signatures, cookies, request bodies, or query parameters.
+- Agent long polls are held for at most 25 seconds, and that route has its own extended write timeout; the reverse proxy's read timeout must be longer than 25 seconds. During graceful shutdown, waiting long polls return immediately.
+
+### External network access
+
+The authentication and node features do not reach the external network on their own. The certificate feature makes outbound HTTPS and DNS requests from the backend: to the ACME directory (by default `acme-v02.api.letsencrypt.org`, for testing `acme-staging-v02.api.letsencrypt.org`, or a custom `https://` directory entered by the administrator, which the backend will access; this can be restricted with an egress firewall at deployment); to the API of the selected DNS provider (`api.cloudflare.com`, Alibaba Cloud `alidns.cn-hangzhou.aliyuncs.com`, `dnspod.tencentcloudapi.com`, `route53.amazonaws.com`); and to the system resolver (`/etc/resolv.conf`) and each domain's authoritative DNS servers, to check whether the validation records have taken effect (waiting at most 5 minutes). ACME requests honor proxy environment variables such as `HTTPS_PROXY`. Provider clients use only the credentials saved in the interface, and do not read AWS, Alibaba Cloud, or Tencent Cloud environment variables, configuration files, or instance roles on the host. With no certificates and no credentials, no outbound requests are made.
+
+The console is currently designed as a single instance, and SQLite provides consistency through WAL and transactions; do not scale horizontally by letting multiple replicas share the same data file. Backups must include the database, the WAL (if present), and `master.key`; it is recommended to stop the backend and then back up the whole data directory or named volume. A leak of both the full volume and the key is outside the protection of database encryption.
+
+## Configuration
+
+The program reads process environment variables; `.env.example` is not loaded automatically.
+
+| Variable               | Default          | Meaning                                                                 |
+| ---------------------- | ---------------- | ----------------------------------------------------------------------- |
+| `VPN_ENV`              | `production`     | Only `development` allows local HTTP cookies                            |
+| `VPN_DATA_DIR`         | `data`           | Directory for SQLite and the key; Compose uses the `/data` named volume |
+| `VPN_HTTP_ADDR`        | `127.0.0.1:8080` | Listen address; port 0 is assigned by the system                        |
+| `VPN_PUBLIC_ORIGIN`    | empty            | Optional exact external Origin; must be HTTPS in production             |
+| `VPN_TRUSTED_PROXIES`  | empty            | Comma-separated reverse proxy IPs or CIDRs, used to identify clients    |
+| `VPN_LOG_LEVEL`        | `info`           | slog level                                                              |
+| `VPN_SHUTDOWN_TIMEOUT` | `10s`            | Graceful shutdown deadline                                              |
+
+The native development launcher uses `--listen-file /absolute/path/listen.json` to get the actual IP, port, and PID; Compose uses the service name and a fixed internal port, while the host port mapping is still assigned dynamically.
+
+## API and verification
+
+The authentication contract is in [auth-api.md](../frontend/docs/auth-api.md), the node and agent API in [nodes-api.md](../frontend/docs/nodes-api.md), the software store API in [apps-api.md](../frontend/docs/apps-api.md), and the certificate and DNS provider API in [certs-api.md](../frontend/docs/certs-api.md). `GET /api/health` is the liveness check, and `GET /api/ready` checks the authentication store connection; a passing health check does not mean an administrator has been created or that any VPN node exists. `veilpost-api healthcheck` requests `/api/ready` on the port from `VPN_HTTP_ADDR`, using `127.0.0.1` when listening on all addresses.
+
+```bash
+make check  # formatting, go vet, real SQLite/HTTP/TOTP tests with race detection, build
+make build
+./bin/veilpost-api --version
+```
+
+Tests are not kept alongside the source: they live in `tests/<package>/` as external `<package>_test` packages that call only the public API; the clocks, collaborator injection points, and pure functions the tests need are exported explicitly in each package's `export.go`. The tests cover session persistence, expiry and revocation, real TOTP, replay protection, concurrent recovery code consumption, wrong passwords, rate limiting, Cookie and Origin checks, logging boundaries, and graceful shutdown. The node tests cover the known signature vector, replay, clock skew, tampering, revocation and long-poll wakeup, single-use redemption of enrollment tokens, expiry and reissue, deletion of revoked nodes, per-node rate limiting, cleanup, and database migration. The software store tests cover loading and validating the catalog manifests, the v2→v3 migration, the install / uninstall / settings API and its permissions, settings validation, and encryption and non-disclosure of sensitive settings, as well as logging boundaries. The certificate tests cover credential encryption and non-disclosure, binding of ciphertext to records, password confirmation, deletion restrictions, validation of domains / ACME directories / email addresses / EAB, backoff and renewal times, and use the in-process Let's Encrypt Pebble test CA and an in-process DNS server to perform real issuance, renewal (new private key, reused account), EAB registration, error classification, and background task cancellation, without reaching the public internet or calling real providers. Test databases use temporary directories and do not touch the development data volume.
+
+The ACME client is `github.com/go-acme/lego/v4`, importing only the four DNS subpackages for Cloudflare, Alibaba Cloud DNS, Tencent Cloud DNSPod, and AWS Route 53; Pebble (`github.com/letsencrypt/pebble/v2`) is used only for tests and does not enter the build output. The Go module path is `github.com/wheakerd/veilpost/app/backend`; versions and dependencies are managed through `.go-version`, `go.mod`, and `go.sum`. The Makefile prefers the Go in the repository's `.runtime/toolchains/` and also supports `GO=/path/to/go`. Build and module caches live in the repository's `.runtime/` and do not enter Git.

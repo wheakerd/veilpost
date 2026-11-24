@@ -1,0 +1,14 @@
+{
+  "hosts": ["unix:///run/wg-easy-docker.sock"],
+  "data-root": "/var/lib/wg-easy/docker",
+  "exec-root": "/run/wg-easy-docker",
+  "pidfile": "/run/wg-easy-docker.pid",
+  "bridge": "none",
+  "iptables": true,
+  "ip6tables": true,
+  "ip-forward": true,
+  "ip-forward-no-drop": true,
+  "userland-proxy": false,
+  "log-driver": "json-file",
+  "log-opts": {"max-size": "10m", "max-file": "3"}
+}

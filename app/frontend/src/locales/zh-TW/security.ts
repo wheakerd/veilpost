@@ -1,0 +1,97 @@
+import type { SecurityMessages } from '../zh-CN/security'
+
+export default {
+    description: '管理登入驗證方式，保護你的網路控制台',
+    twoFactor: {
+        title: '兩步驟驗證',
+        description: '在帳號密碼之外，再驗證一次你的身分',
+        enabled: '已啟用',
+        disabled: '未啟用',
+        protectedTitle: '驗證器正在保護你的帳號',
+        unprotectedTitle: '使用驗證器保護登入',
+        protectedBody:
+            '登入時輸入驗證器動態碼；無法使用驗證器時，可以使用已儲存的復原碼。',
+        unprotectedBody:
+            '綁定驗證器後，登入時還需要輸入 6 位數動態驗證碼。支援常見的 TOTP 驗證器。',
+        recoveryRemaining: '剩餘 {count} 組可用復原碼',
+        recoveryLow: '剩餘 {count} 組可用復原碼，建議重新產生。',
+        regenerate: '重新產生復原碼',
+        enable: '啟用兩步驟驗證',
+        disable: '停用兩步驟驗證',
+    },
+    confirm: {
+        title: '先確認是你本人',
+        description: '輸入目前的密碼，開始綁定驗證器',
+        submit: '繼續綁定',
+    },
+    setup: {
+        scanTitle: '掃描 QR 碼',
+        scanBody: '在驗證器中選擇「新增帳號」，掃描下方的 QR 碼',
+        qrAlt: '驗證器綁定 QR 碼',
+        added: '新增後，驗證器會顯示每 30 秒更新一次的 6 位數驗證碼',
+        qrUnavailable: 'QR 碼暫時無法顯示，請手動新增帳號。',
+        manualSummary: '無法掃描？手動輸入金鑰',
+        manualKey: '類型選擇「以時間為準」，輸入此綁定金鑰：',
+        copyKey: '複製金鑰',
+        verifyTitle: '驗證並完成綁定',
+        verifyBody: '輸入新增帳號的動態驗證碼。驗證通過後才會啟用。',
+        submit: '驗證並啟用',
+        cancel: '取消綁定',
+        expired: '本次綁定已逾時，請重新開始設定。',
+    },
+    recovery: {
+        confirmFirst: '請先確認已儲存復原碼',
+        title: '儲存你的復原碼',
+        body: '這些復原碼只會在這裡顯示。請儲存在密碼管理工具等安全的位置；遺失驗證器時，每組復原碼可以登入一次。',
+        listLabel: '復原碼',
+        copy: '複製復原碼',
+        copied: '已複製，請儲存在安全的位置。',
+        saved: '我已妥善儲存復原碼',
+        finishSetup: '完成設定',
+        finish: '完成',
+        leaveTitle: '復原碼尚未儲存',
+        leave: '仍要離開',
+        stay: '留在此頁',
+        leaveConfirm:
+            '復原碼只會在這裡顯示。尚未儲存就離開，可能無法找回。確定要離開嗎？',
+        regenerated: '新的復原碼已生效，舊的復原碼已全部失效。',
+        enabled: '兩步驟驗證已啟用，下次登入時需要驗證身分。',
+    },
+    regenerate: {
+        title: '重新產生復原碼',
+        description:
+            '產生後，所有舊的復原碼會立即失效。請輸入目前的密碼和驗證器動態碼確認。',
+        submit: '產生新的復原碼',
+    },
+    disable: {
+        title: '停用兩步驟驗證',
+        description:
+            '停用後，登入只需要帳號和密碼，現有的復原碼也會失效。請輸入目前的密碼和驗證器動態碼確認。',
+        submit: '確認停用兩步驟驗證',
+        done: '已停用兩步驟驗證',
+    },
+    password: {
+        title: '登入密碼',
+        description: '定期更換密碼；變更後，其他裝置需要重新登入。',
+        change: '變更密碼',
+        next: '新密碼',
+        confirm: '確認新密碼',
+        hint: '至少 12 個字元，不能與目前的密碼相同',
+        save: '儲存新密碼',
+        missing: '請輸入目前的密碼和新密碼。',
+        mismatch: '兩次輸入的新密碼不一致。',
+        changed: '密碼已變更，其他裝置上的登入已登出。',
+    },
+    sessions: {
+        noOthers: '沒有其他工作階段可登出',
+        title: '登入工作階段',
+        unavailable: '暫時無法讀取工作階段資訊，請稍後重新整理頁面。',
+        loading: '正在讀取其他工作階段…',
+        others: '除了目前的瀏覽器，還有 {count} 個工作階段處於登入狀態',
+        onlyCurrent: '只有目前的瀏覽器處於登入狀態',
+        revoke: '登出其他工作階段',
+        revoked: '已登出其他工作階段',
+    },
+    lostEverything:
+        '驗證器和復原碼都遺失時，請由伺服器管理員執行 {command} 恢復存取權',
+} satisfies SecurityMessages

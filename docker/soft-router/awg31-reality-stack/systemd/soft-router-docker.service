@@ -1,0 +1,21 @@
+[Unit]
+Description=Dedicated Docker runtime for AWG and REALITY
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=PATH=/opt/soft-router/awg31-reality-stack/runtime/bin:/usr/sbin:/usr/bin
+ExecStart=/opt/soft-router/awg31-reality-stack/runtime/bin/dockerd --config-file=/opt/soft-router/awg31-reality-stack/config/daemon.json
+Restart=on-failure
+RestartSec=5
+RuntimeDirectory=soft-router-docker
+RuntimeDirectoryMode=0700
+Delegate=yes
+KillMode=process
+TimeoutStopSec=90
+LimitNOFILE=1048576
+TasksMax=infinity
+
+[Install]
+WantedBy=multi-user.target

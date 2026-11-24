@@ -1,0 +1,8 @@
+# First initialization only; manage.py removes these variables after setup.
+services:
+  wg-easy:
+    environment:
+      INIT_ENABLED: "true"
+    env_file:
+      - path: ${WG_EASY_DATA_ROOT:?Run manage.py init first}/private/bootstrap.env
+        format: raw
