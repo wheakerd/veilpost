@@ -2,11 +2,9 @@
 
 # <img src="docs/assets/veilpost-icon.svg" width="32" height="32" alt=""> **Veilpost**
 
-[English](README.md) | 简体中文
-
----
-
 **自托管的多协议 VPN 节点控制台。**
+
+[English](README.md) | 简体中文
 
 [![CI 构建状态](https://github.com/wheakerd/veilpost/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/wheakerd/veilpost/actions/workflows/ci.yml)
 [![发布版本](https://img.shields.io/badge/Releases-4b4ee6?logo=github)](https://github.com/wheakerd/veilpost/releases)

@@ -2,11 +2,9 @@
 
 # <img src="docs/assets/veilpost-icon.svg" width="32" height="32" alt=""> **Veilpost**
 
-English | [简体中文](README.zh-CN.md)
-
----
-
 **A self-hosted console for multi-protocol VPN nodes.**
+
+English | [简体中文](README.zh-CN.md)
 
 [![CI status](https://github.com/wheakerd/veilpost/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/wheakerd/veilpost/actions/workflows/ci.yml)
 [![Releases](https://img.shields.io/badge/Releases-4b4ee6?logo=github)](https://github.com/wheakerd/veilpost/releases)
