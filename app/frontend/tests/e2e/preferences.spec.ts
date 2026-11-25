@@ -117,13 +117,43 @@ test('on narrow screens preferences are a sheet that pulls down to close', async
     await expect.poll(() => sheetOffset(page)).toBe(0)
     await expect(sheet).toBeVisible()
 
-    // A quick flick downwards closes it.
-    await page.mouse.move(x, y)
-    await page.mouse.down()
-    for (let step = 1; step <= 6; step++) {
-        await page.mouse.move(x, y + step * 40)
+    // Keep the flick's 20 ms sample intervals independent of runner latency.
+    const session = await page.context().newCDPSession(page)
+    const steps = 6
+    const distance = 240
+    const sampleInterval = 0.02
+    const startedAt = Date.now() / 1000 - (steps + 1) * sampleInterval
+    await session.send('Input.dispatchMouseEvent', {
+        type: 'mousePressed',
+        x,
+        y,
+        button: 'left',
+        buttons: 1,
+        clickCount: 1,
+        timestamp: startedAt,
+    })
+    for (let step = 1; step <= steps; step++) {
+        const offset = (step * distance) / steps
+        await session.send('Input.dispatchMouseEvent', {
+            type: 'mouseMoved',
+            x,
+            y: y + offset,
+            button: 'left',
+            buttons: 1,
+            timestamp: startedAt + step * sampleInterval,
+        })
+        await expect.poll(() => sheetOffset(page)).toBe(offset)
     }
-    await page.mouse.up()
+    await session.send('Input.dispatchMouseEvent', {
+        type: 'mouseReleased',
+        x,
+        y: y + distance,
+        button: 'left',
+        buttons: 0,
+        clickCount: 1,
+        timestamp: startedAt + (steps + 1) * sampleInterval,
+    })
+    await session.detach()
     await expect(sheet).toBeHidden()
 
     // It opens again at rest, not where the flick left it.
