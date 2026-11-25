@@ -73,8 +73,33 @@ async function requestCertificate(
     return (await response.json()).certificate.id as string
 }
 
-function credentialRow(page: Page, name: string): Locator {
-    return page.locator('li[data-credential-id]').filter({ hasText: name })
+function credentialRow(page: Page, id: string): Locator {
+    return page.locator(`li[data-credential-id="${id}"]`)
+}
+
+async function chooseCredential(page: Page, id: string, label: string) {
+    const select = chosen(page, page.getByLabel('DNS 服务商凭据'))
+    await select.locator('.el-select__wrapper').click()
+    const option = page
+        .getByRole('option')
+        .and(page.locator(`[data-credential-id="${id}"]`))
+    await expect(option).toHaveText(label)
+    await option.click()
+    await expect(
+        select.locator('.el-select__selected-item').filter({ hasText: label }),
+    ).toHaveText(label)
+}
+
+async function saveNewCredential(page: Page) {
+    const response = page.waitForResponse(
+        (response) =>
+            response.url() === `${origin}/api/dns-credentials` &&
+            response.request().method() === 'POST',
+    )
+    await page.getByRole('button', { name: '保存凭据' }).click()
+    const saved = await response
+    expect(saved.status()).toBe(201)
+    return (await saved.json()).credential as { id: string; name: string }
 }
 
 function certificateRow(page: Page, domain: string): Locator {
@@ -102,16 +127,16 @@ test('DNS credentials are write-only and never shown again', async ({
     const token = secret()
 
     await page.getByRole('button', { name: '添加凭据' }).click()
-    await page.getByLabel('名称', { exact: true }).fill(name)
+    await page.getByLabel('备注（可选）', { exact: true }).fill(name)
     await expect(
         chosen(page, page.getByLabel('服务商', { exact: true })),
     ).toContainText('Cloudflare')
     await page.getByLabel('API Token').fill(token)
     await page.getByLabel('当前密码', { exact: true }).fill(account.password)
-    await page.getByRole('button', { name: '保存凭据' }).click()
+    const { id: credentialId } = await saveNewCredential(page)
     await expect(page.getByText(`凭据“${name}”已保存`)).toBeVisible()
 
-    const row = credentialRow(page, name)
+    const row = credentialRow(page, credentialId)
     await expect(row).toContainText('Cloudflare')
     await expect(row.locator('[data-field="apiToken"]')).toContainText('已设置')
     await expect(row).toContainText('未被证书使用')
@@ -127,7 +152,9 @@ test('DNS credentials are write-only and never shown again', async ({
         '已设置，留空保持不变',
     )
     await expect(tokenInput).toHaveAttribute('type', 'password')
-    await page.getByLabel('名称', { exact: true }).fill(`${name}-renamed`)
+    await page
+        .getByLabel('备注（可选）', { exact: true })
+        .fill(`${name}-renamed`)
     await page
         .getByLabel('当前密码', { exact: true })
         .fill('wrong-password-value')
@@ -138,9 +165,7 @@ test('DNS credentials are write-only and never shown again', async ({
     await page.getByRole('button', { name: '保存修改' }).click()
     await expect(page.getByText(`凭据“${name}-renamed”已更新`)).toBeVisible()
     await expect(
-        credentialRow(page, `${name}-renamed`).locator(
-            '[data-field="apiToken"]',
-        ),
+        credentialRow(page, credentialId).locator('[data-field="apiToken"]'),
     ).toContainText('已设置')
 
     // Neither the API nor browser storage holds the token or the password.
@@ -153,14 +178,160 @@ test('DNS credentials are write-only and never shown again', async ({
     expect(storage).not.toContain(token)
 
     // Deleting requires the password.
-    await credentialRow(page, `${name}-renamed`)
+    await credentialRow(page, credentialId)
         .getByRole('button', { name: '删除' })
         .click()
     await page.getByLabel('当前密码', { exact: true }).fill(account.password)
     await page.getByRole('button', { name: '确认删除' }).click()
     await expect(page.getByText(`凭据“${name}-renamed”已删除`)).toBeVisible()
-    await expect(credentialRow(page, `${name}-renamed`)).toHaveCount(0)
+    await expect(credentialRow(page, credentialId)).toHaveCount(0)
 })
+
+for (const [kind, initialNote, provider, providerLabel] of [
+    ['empty', '', 'cloudflare', 'Cloudflare'],
+    ['whitespace', '  　 ', 'alidns', '阿里云 DNS'],
+] as const) {
+    test(`DNS ${kind} notes stay empty and share provider fallback labels`, async ({
+        page,
+        account,
+    }) => {
+        test.setTimeout(60_000)
+        await signIn(page, account)
+        await page.goto('/dns-providers')
+        await page.getByRole('button', { name: '添加凭据' }).click()
+        const note = page.getByLabel('备注（可选）', { exact: true })
+        await note.fill(initialNote)
+        await expect(
+            page.getByText('最多 64 个字符；不填写时显示服务商名称。'),
+        ).toBeVisible()
+        if (provider === 'alidns') {
+            await choose(
+                page,
+                page.getByLabel('服务商', { exact: true }),
+                providerLabel,
+            )
+            await page
+                .getByLabel('Access Key ID', { exact: true })
+                .fill(secret())
+            await page
+                .getByLabel('AccessKey Secret', { exact: true })
+                .fill(secret())
+        } else {
+            await page.getByLabel('API Token').fill(secret())
+        }
+        await page
+            .getByLabel('当前密码', { exact: true })
+            .fill(account.password)
+        const credential = await saveNewCredential(page)
+        expect(credential.name).toBe('')
+        await expect(
+            page.getByText(`凭据“${providerLabel}”已保存`),
+        ).toBeVisible()
+        const row = credentialRow(page, credential.id)
+        await expect(row.locator('.node-name strong')).toHaveText(providerLabel)
+        await expect(row.locator('.node-name small')).toHaveCount(0)
+        await expect(
+            row.getByRole('list', { name: providerLabel, exact: true }),
+        ).toBeVisible()
+
+        // Reloading must not replace the empty stored note with a translated name.
+        await page.reload()
+        await row.getByRole('button', { name: '修改', exact: true }).click()
+        await expect(
+            page.getByRole('heading', { name: `修改凭据“${providerLabel}”` }),
+        ).toBeVisible()
+        await expect(note).toHaveValue('')
+        const remark = `${unique('e2e-note').padEnd(63, 'x')}🔑`
+        await note.fill(`  ${remark}  `)
+        await page.getByRole('button', { name: '取消', exact: true }).click()
+        await expect(page.getByText('放弃修改')).toBeVisible()
+        await page
+            .getByRole('button', { name: '继续编辑', exact: true })
+            .click()
+        await page
+            .getByLabel('当前密码', { exact: true })
+            .fill(account.password)
+        await page.getByRole('button', { name: '保存修改' }).click()
+        await expect(page.getByText(`凭据“${remark}”已更新`)).toBeVisible()
+        await expect(row.locator('.node-name strong')).toHaveText(remark)
+        await expect(row.locator('.node-name small')).toHaveText(providerLabel)
+
+        // The selected label is exactly the note, without an added provider suffix.
+        await page.goto('/certificates')
+        await page
+            .getByRole('button', { name: '申请证书', exact: true })
+            .click()
+        await chooseCredential(page, credential.id, remark)
+        const domain = `${unique('note')}.example.com`
+        await page.getByLabel('域名', { exact: true }).fill(domain)
+        await tick(page.getByLabel('自定义 ACME 目录'))
+        await page.getByLabel('ACME 目录地址').fill(await closedDirectory())
+        await page.getByRole('button', { name: '提交申请' }).click()
+        const certRow = certificateRow(page, domain)
+        await expect(certRow).toContainText(remark)
+        await expect(certRow.getByTestId('certificate-status')).toHaveText(
+            '签发失败',
+            { timeout: 20_000 },
+        )
+        const certificateId = await certRow.getAttribute('data-certificate-id')
+
+        // Clearing the old note preserves the write-only secrets and refreshes certificate metadata.
+        await page.goto('/dns-providers')
+        await row.getByRole('button', { name: '修改', exact: true }).click()
+        await expect(note).toHaveValue(remark)
+        await note.fill('')
+        await page
+            .getByLabel('当前密码', { exact: true })
+            .fill(account.password)
+        await page.getByRole('button', { name: '保存修改' }).click()
+        await expect(
+            page.getByText(`凭据“${providerLabel}”已更新`),
+        ).toBeVisible()
+        await expect(row.locator('.node-name strong')).toHaveText(providerLabel)
+        await expect(row.locator('.secret-status')).not.toContainText('未设置')
+        await page.reload()
+        await row.getByRole('button', { name: '修改', exact: true }).click()
+        await expect(note).toHaveValue('')
+        await page.getByRole('button', { name: '取消', exact: true }).click()
+
+        await page.goto('/certificates')
+        await expect(certRow).toContainText(providerLabel)
+        await expect(certRow).not.toContainText(remark)
+        const response = await page.request.get(`${origin}/api/certificates`)
+        expect(response.status()).toBe(200)
+        const listed = (await response.json()).certificates as {
+            id: string
+            dnsCredentialName: string
+            dnsCredentialProvider: string
+        }[]
+        expect(listed.find((item) => item.id === certificateId)).toMatchObject({
+            dnsCredentialName: '',
+            dnsCredentialProvider: provider,
+        })
+        await page
+            .getByRole('button', { name: '申请证书', exact: true })
+            .click()
+        await chooseCredential(page, credential.id, providerLabel)
+        await noHorizontalOverflow(page)
+        await noStoredSecrets(page, account)
+
+        const removed = await page.request.post(
+            `${origin}/api/certificates/${certificateId}/delete`,
+            { headers, data: {} },
+        )
+        expect(removed.status()).toBe(204)
+        await page.goto('/dns-providers')
+        await row.getByRole('button', { name: '删除', exact: true }).click()
+        await page
+            .getByLabel('当前密码', { exact: true })
+            .fill(account.password)
+        await page.getByRole('button', { name: '确认删除' }).click()
+        await expect(
+            page.getByText(`凭据“${providerLabel}”已删除`),
+        ).toBeVisible()
+        await expect(row).toHaveCount(0)
+    })
+}
 
 test('credentials used by a certificate cannot be deleted', async ({
     page,
@@ -175,7 +346,7 @@ test('credentials used by a certificate cannot be deleted', async ({
         `${unique('used')}.example.com`,
     )
     await page.goto('/dns-providers')
-    const row = credentialRow(page, name)
+    const row = credentialRow(page, credentialId)
     await expect(row).toContainText('1 张证书使用')
     await row.getByRole('button', { name: '删除' }).click()
     await page.getByLabel('当前密码', { exact: true }).fill(account.password)
@@ -198,7 +369,12 @@ test('certificate requests validate input and show the real issuance state', asy
 }) => {
     await signIn(page, account)
     const credentialName = unique('e2e-cert')
-    await createCredential(page, account, credentialName, secret())
+    const credentialId = await createCredential(
+        page,
+        account,
+        credentialName,
+        secret(),
+    )
     await page.goto('/certificates')
     await expect(
         page.getByRole('heading', { name: '证书', level: 1 }),
@@ -212,11 +388,7 @@ test('certificate requests validate input and show the real issuance state', asy
 
     // The backend rejects names that are not DNS names.
     await page.getByLabel('域名', { exact: true }).fill('bad_name.example.com')
-    await choose(
-        page,
-        page.getByLabel('DNS 服务商凭据'),
-        `${credentialName} · Cloudflare`,
-    )
+    await chooseCredential(page, credentialId, credentialName)
     await submit.click()
     await expect(page.getByText(/^域名格式不正确/)).toBeVisible()
 

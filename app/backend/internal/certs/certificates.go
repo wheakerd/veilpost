@@ -17,22 +17,23 @@ import (
 // Certificate is the API view of a certificate request. The private key is
 // never part of it.
 type Certificate struct {
-	ID             string        `json:"id"`
-	Domains        []string      `json:"domains"`
-	Directory      string        `json:"directory"`
-	DirectoryURL   string        `json:"directoryUrl"`
-	Email          string        `json:"email"`
-	CredentialID   string        `json:"dnsCredentialId"`
-	CredentialName string        `json:"dnsCredentialName"`
-	Status         string        `json:"status"`
-	Issuing        bool          `json:"issuing"`
-	Issuer         *string       `json:"issuer"`
-	NotBefore      *string       `json:"notBefore"`
-	NotAfter       *string       `json:"notAfter"`
-	RenewAt        *string       `json:"renewAt"`
-	LastError      *IssueProblem `json:"lastError"`
-	CreatedAt      string        `json:"createdAt"`
-	UpdatedAt      string        `json:"updatedAt"`
+	ID                 string        `json:"id"`
+	Domains            []string      `json:"domains"`
+	Directory          string        `json:"directory"`
+	DirectoryURL       string        `json:"directoryUrl"`
+	Email              string        `json:"email"`
+	CredentialID       string        `json:"dnsCredentialId"`
+	CredentialName     string        `json:"dnsCredentialName"`
+	CredentialProvider string        `json:"dnsCredentialProvider"`
+	Status             string        `json:"status"`
+	Issuing            bool          `json:"issuing"`
+	Issuer             *string       `json:"issuer"`
+	NotBefore          *string       `json:"notBefore"`
+	NotAfter           *string       `json:"notAfter"`
+	RenewAt            *string       `json:"renewAt"`
+	LastError          *IssueProblem `json:"lastError"`
+	CreatedAt          string        `json:"createdAt"`
+	UpdatedAt          string        `json:"updatedAt"`
 }
 
 // IssueProblem is the category and, for ACME problems, a short description
@@ -53,7 +54,7 @@ type RequestInput struct {
 	EAB          EAB      `json:"eab"`
 }
 
-const certificateColumns = `c.id,c.domains,c.ca_directory,a.email,c.dns_credential_id,d.name,c.status,c.issuer,c.not_before,c.not_after,
+const certificateColumns = `c.id,c.domains,c.ca_directory,a.email,c.dns_credential_id,d.name,d.provider,c.status,c.issuer,c.not_before,c.not_after,
  c.renew_at,c.last_error,c.last_error_detail,c.last_error_at,c.created_at,c.updated_at
  FROM certificates c JOIN acme_accounts a ON a.id=c.acme_account_id JOIN dns_credentials d ON d.id=c.dns_credential_id`
 
@@ -63,7 +64,7 @@ func (s *Service) scanCertificate(row scanner) (Certificate, error) {
 	var issuer, lastError, lastDetail sql.NullString
 	var notBefore, notAfter, renew, errorAt sql.NullInt64
 	var created, updated int64
-	if err := row.Scan(&c.ID, &domains, &c.DirectoryURL, &c.Email, &c.CredentialID, &c.CredentialName, &c.Status, &issuer,
+	if err := row.Scan(&c.ID, &domains, &c.DirectoryURL, &c.Email, &c.CredentialID, &c.CredentialName, &c.CredentialProvider, &c.Status, &issuer,
 		&notBefore, &notAfter, &renew, &lastError, &lastDetail, &errorAt, &created, &updated); err != nil {
 		return Certificate{}, err
 	}

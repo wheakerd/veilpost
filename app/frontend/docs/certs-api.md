@@ -15,7 +15,7 @@ Follows the [authentication contract](auth-api.md): same origin, `credentials: s
 ```ts
 interface DnsCredential {
     id: string // 22-character base64url random identifier
-    name: string
+    name: string // optional note; empty string when unset
     provider: 'cloudflare' | 'alidns' | 'tencentcloud' | 'route53'
     fields: Record<string, boolean> // whether each field is saved; values are never returned
     certificates: number // number of certificates that reference this credential
@@ -45,6 +45,7 @@ Values are printable ASCII without whitespace, at most 512 bytes; `region` looks
 | `POST /api/dns-credentials/:id/delete` | `{ password }`                          | `204`                                  |
 | `POST /api/dns-credentials/:id/verify` | `{}`                                    | `200 { status: 'ok' }`                 |
 
+- `name` is an optional note, limited to 64 Unicode characters after trimming leading and trailing whitespace; control characters and line/paragraph separators are rejected. Empty or whitespace-only input is stored as `""`, including when clearing an existing note. Credential labels throughout the interface use the note, falling back to the localized provider name when empty. This fallback is for display only.
 - Adding, changing, and deleting all require the current password and share the per-session rate limit (15 per 5 minutes) with account security operations. A wrong password returns `403 INVALID_PASSWORD` and changes no data.
 - The provider cannot be changed on update. A non-empty value in `secrets` replaces that field, an empty string clears an optional field (an empty required field returns `INVALID_SECRETS`), and fields that are absent keep their existing values. The interface sends only the fields the user filled in and never reads saved values.
 - A credential referenced by a certificate cannot be deleted: `409 CREDENTIAL_IN_USE`.
@@ -62,7 +63,8 @@ interface Certificate {
     directoryUrl: string // https:// ACME directory URL
     email: string // ACME account contact email, may be empty
     dnsCredentialId: string
-    dnsCredentialName: string
+    dnsCredentialName: string // current optional note; may be empty
+    dnsCredentialProvider: 'cloudflare' | 'alidns' | 'tencentcloud' | 'route53'
     status: 'pending' | 'valid' | 'failed' | 'expired'
     issuing: boolean // an issuance or renewal task is queued or running in this process
     issuer: string | null // organization name of the leaf certificate's issuer (CN if none)
@@ -75,6 +77,7 @@ interface Certificate {
 }
 ```
 
+- `dnsCredentialName` and `dnsCredentialProvider` are read from the current joined credential on every query, so editing or clearing its note is reflected immediately. The certificate list uses the same note/provider display rule as the credential list and selector.
 - `pending`: first issuance queued or in progress. `valid`: issued and not expired. `failed`: first issuance failed; waiting for a manual reissue. `expired`: the certificate has expired (occurs when renewal keeps failing).
 - During renewal the status stays `valid` and `issuing` is `true`; the interface shows "Renewing".
 - `lastError.code` is the issuance error category (see the table below); `detail` is present only when the ACME service returned a problem document, and contains the problem type and a short description (from the CA, untranslated, at most 300 characters); the original text of DNS provider errors is never stored. It is cleared after a successful issuance.
@@ -121,22 +124,22 @@ interface Certificate {
 
 ## Error codes
 
-| Error code                | Status | Meaning                                                                  |
-| ------------------------- | ------ | ------------------------------------------------------------------------ |
-| `INVALID_CREDENTIAL_NAME` | 400    | Name is empty, longer than 64 characters, or contains control characters |
-| `INVALID_PROVIDER`        | 400    | Unsupported provider                                                     |
-| `INVALID_SECRETS`         | 400    | Fields are missing, unknown, or malformed                                |
-| `CREDENTIAL_NOT_FOUND`    | 404    | Credential does not exist                                                |
-| `CREDENTIAL_IN_USE`       | 409    | Credential is referenced by a certificate and cannot be deleted          |
-| `CREDENTIAL_UNREADABLE`   | 409    | The saved credential cannot be decrypted (must be re-entered)            |
-| `CREDENTIAL_REJECTED`     | 422    | The provider rejected the credential during verification                 |
-| `PROVIDER_UNREACHABLE`    | 424    | Cannot connect to the provider during verification                       |
-| `INVALID_DOMAIN`          | 400    | Invalid domain name                                                      |
-| `TOO_MANY_DOMAINS`        | 400    | More than 100 names                                                      |
-| `INVALID_DIRECTORY`       | 400    | Invalid ACME service or directory URL                                    |
-| `INVALID_EMAIL`           | 400    | Invalid contact email                                                    |
-| `INVALID_EAB`             | 400    | EAB is incomplete, malformed, or used with a built-in directory          |
-| `CERTIFICATE_NOT_FOUND`   | 404    | Certificate does not exist                                               |
-| `CERTIFICATE_NOT_ISSUED`  | 409    | Certificate not yet issued; the chain cannot be downloaded               |
+| Error code                | Status | Meaning                                                                                        |
+| ------------------------- | ------ | ---------------------------------------------------------------------------------------------- |
+| `INVALID_CREDENTIAL_NAME` | 400    | Note exceeds 64 Unicode characters or contains control characters or line/paragraph separators |
+| `INVALID_PROVIDER`        | 400    | Unsupported provider                                                                           |
+| `INVALID_SECRETS`         | 400    | Fields are missing, unknown, or malformed                                                      |
+| `CREDENTIAL_NOT_FOUND`    | 404    | Credential does not exist                                                                      |
+| `CREDENTIAL_IN_USE`       | 409    | Credential is referenced by a certificate and cannot be deleted                                |
+| `CREDENTIAL_UNREADABLE`   | 409    | The saved credential cannot be decrypted (must be re-entered)                                  |
+| `CREDENTIAL_REJECTED`     | 422    | The provider rejected the credential during verification                                       |
+| `PROVIDER_UNREACHABLE`    | 424    | Cannot connect to the provider during verification                                             |
+| `INVALID_DOMAIN`          | 400    | Invalid domain name                                                                            |
+| `TOO_MANY_DOMAINS`        | 400    | More than 100 names                                                                            |
+| `INVALID_DIRECTORY`       | 400    | Invalid ACME service or directory URL                                                          |
+| `INVALID_EMAIL`           | 400    | Invalid contact email                                                                          |
+| `INVALID_EAB`             | 400    | EAB is incomplete, malformed, or used with a built-in directory                                |
+| `CERTIFICATE_NOT_FOUND`   | 404    | Certificate does not exist                                                                     |
+| `CERTIFICATE_NOT_ISSUED`  | 409    | Certificate not yet issued; the chain cannot be downloaded                                     |
 
 The generic `SESSION_EXPIRED`, `INVALID_PASSWORD`, `TOO_MANY_ATTEMPTS`, `REQUEST_FAILED`, and `SERVICE_UNAVAILABLE` also apply. Every error code has text in all four languages' `src/locales/<locale>/errors.ts`; the text for issuance error categories is in `certificates.issueErrors` in `certs.ts`. The client treats a 404 with an error code ending in `_NOT_FOUND` as a missing resource, and any other 404 as the service being unavailable.

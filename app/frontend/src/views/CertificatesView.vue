@@ -9,6 +9,7 @@ import {
 } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { credentialLabel } from '@/i18n/certs'
 import DocumentChecked from '~icons/lucide/file-badge'
 import Plus from '~icons/lucide/plus'
 import PageIntro from '@/components/PageIntro.vue'
@@ -469,7 +470,13 @@ onBeforeUnmount(() => {
                                 v-for="credential in credentials ?? []"
                                 :key="credential.id"
                                 :value="credential.id"
-                                :label="`${credential.name} · ${t(`certs.dns.providers.${credential.provider}`)}`"
+                                :label="
+                                    credentialLabel(
+                                        credential.name,
+                                        credential.provider,
+                                    )
+                                "
+                                :data-credential-id="credential.id"
                             />
                         </ElSelect>
                         <small v-if="credentials && !credentials.length"
@@ -678,7 +685,10 @@ onBeforeUnmount(() => {
                                                 }}
                                                 ·
                                                 {{
-                                                    certificate.dnsCredentialName
+                                                    credentialLabel(
+                                                        certificate.dnsCredentialName,
+                                                        certificate.dnsCredentialProvider,
+                                                    )
                                                 }}</small
                                             >
                                             <p

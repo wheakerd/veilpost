@@ -40,7 +40,7 @@ export default {
     UNKNOWN_SETTING:
         'The settings include fields this software doesn’t support. Refresh the page and try again.',
     INVALID_CREDENTIAL_NAME:
-        'Credential names need 1–64 characters without line breaks or other control characters.',
+        'Credential notes can have up to 64 characters without line breaks or other control characters.',
     INVALID_PROVIDER: 'This DNS provider is not supported.',
     INVALID_SECRETS:
         'Some credential fields are missing or malformed. Check them and try again.',
