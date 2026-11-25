@@ -289,7 +289,7 @@ func TestCredentialValidationAndPassword(t *testing.T) {
 		secrets        map[string]string
 		code           string
 	}{
-		{"", "cloudflare", map[string]string{"apiToken": "x"}, "INVALID_CREDENTIAL_NAME"},
+		{strings.Repeat("界", 65), "cloudflare", map[string]string{"apiToken": "x"}, "INVALID_CREDENTIAL_NAME"},
 		{"line\nbreak", "cloudflare", map[string]string{"apiToken": "x"}, "INVALID_CREDENTIAL_NAME"},
 		{"DNS", "godaddy", map[string]string{"apiToken": "x"}, "INVALID_PROVIDER"},
 		{"DNS", "cloudflare", map[string]string{}, "INVALID_SECRETS"},
@@ -307,6 +307,110 @@ func TestCredentialValidationAndPassword(t *testing.T) {
 	}
 	_, err = f.certs.Credentials(ctx, "invalid-session")
 	expectCode(t, err, "SESSION_EXPIRED")
+}
+
+func TestCredentialOptionalNote(t *testing.T) {
+	for _, tc := range []struct {
+		label, input, want string
+		valid              bool
+	}{
+		{"empty", "", "", true},
+		{"whitespace", " \t\n\u3000 ", "", true},
+		{"trimmed", "  DNS 备注  ", "DNS 备注", true},
+		{"unicode limit", " " + strings.Repeat("界🔑", 32) + " ", strings.Repeat("界🔑", 32), true},
+		{"too long", strings.Repeat("界", 65), "", false},
+		{"newline", "line\nbreak", "", false},
+		{"control", "note\x00", "", false},
+		{"separator", "line\u2028break", "", false},
+		{"paragraph", "line\u2029break", "", false},
+		{"invalid utf8", "note\xff", "", false},
+	} {
+		t.Run(tc.label, func(t *testing.T) {
+			f := newFixture(t)
+			ctx := context.Background()
+			created, err := f.certs.CreateCredential(ctx, f.session, tc.input, "cloudflare", map[string]string{"apiToken": cloudflareToken}, testPassword)
+			if tc.valid {
+				if err != nil || created.Name != tc.want {
+					t.Fatalf("create note: %q, %v", created.Name, err)
+				}
+			} else {
+				expectCode(t, err, "INVALID_CREDENTIAL_NAME")
+			}
+			// Updating an existing note also allows clearing it; omitted secrets stay set.
+			existing := f.cloudflare(t)
+			updated, err := f.certs.UpdateCredential(ctx, f.session, existing.ID, tc.input, nil, testPassword)
+			want := tc.want
+			if tc.valid {
+				if err != nil || updated.Name != want || !updated.Fields["apiToken"] {
+					t.Fatalf("update note: %+v, %v", updated, err)
+				}
+			} else {
+				expectCode(t, err, "INVALID_CREDENTIAL_NAME")
+				want = existing.Name
+			}
+			reloaded, err := f.certs.Credential(ctx, existing.ID)
+			if err != nil || reloaded.Name != want {
+				t.Fatalf("reloaded note: %q, %v", reloaded.Name, err)
+			}
+			var stored string
+			if err := f.auth.Database().QueryRow("SELECT name FROM dns_credentials WHERE id=?", existing.ID).Scan(&stored); err != nil || stored != want {
+				t.Fatalf("stored note: %q, %v", stored, err)
+			}
+		})
+	}
+}
+
+func TestCertificateCredentialMetadataIsLive(t *testing.T) {
+	providers := map[string]map[string]string{
+		"cloudflare":   {"apiToken": cloudflareToken},
+		"alidns":       {"accessKeyId": "test-id", "accessKeySecret": alidnsSecret},
+		"tencentcloud": {"secretId": "test-id", "secretKey": "test-secret"},
+		"route53":      {"accessKeyId": "test-id", "secretAccessKey": route53Secret, "region": "us-east-1"},
+	}
+	for provider, secrets := range providers {
+		t.Run(provider, func(t *testing.T) {
+			f := newFixture(t)
+			ctx := context.Background()
+			credential, err := f.certs.CreateCredential(ctx, f.session, "", provider, secrets, testPassword)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// The fixture does not start the issuance scheduler or call any provider.
+			certificate, err := f.certs.Request(ctx, f.session, certs.RequestInput{Domains: []string{"example.com"}, CredentialID: credential.ID})
+			if err != nil || certificate.CredentialName != "" || certificate.CredentialProvider != provider {
+				t.Fatalf("request metadata: %+v, %v", certificate, err)
+			}
+			for _, note := range []string{"Updated note", ""} {
+				if _, err := f.certs.UpdateCredential(ctx, f.session, credential.ID, note, nil, testPassword); err != nil {
+					t.Fatal(err)
+				}
+				listed, err := f.certs.Certificates(ctx, f.session)
+				if err != nil || len(listed) != 1 {
+					t.Fatalf("list: %v, %v", listed, err)
+				}
+				current, err := f.certs.Certificate(ctx, certificate.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, result := range []certs.Certificate{listed[0], current} {
+					if result.CredentialName != note || result.CredentialProvider != provider {
+						t.Fatalf("stale credential metadata: %+v", result)
+					}
+					encoded, err := json.Marshal(result)
+					if err != nil {
+						t.Fatal(err)
+					}
+					var payload map[string]any
+					if err := json.Unmarshal(encoded, &payload); err != nil {
+						t.Fatal(err)
+					}
+					if payload["dnsCredentialName"] != note || payload["dnsCredentialProvider"] != provider {
+						t.Fatalf("API metadata: %s", encoded)
+					}
+				}
+			}
+		})
+	}
 }
 
 func TestCredentialUpdateKeepsOmittedValues(t *testing.T) {

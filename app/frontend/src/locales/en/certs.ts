@@ -141,14 +141,14 @@ export default {
                 'Secrets are not shown again after saving. Enter your current password to confirm.',
             editDescription:
                 'Secrets left empty keep their value. Enter your current password to confirm.',
-            name: 'Name',
-            nameHint: '1–64 characters, only used to tell credentials apart',
+            name: 'Note (optional)',
+            nameHint:
+                'Up to 64 characters; leave empty to display the provider name.',
             provider: 'Provider',
             keepValue: 'Set; leave empty to keep',
             submitCreate: 'Save credentials',
             submitEdit: 'Save changes',
-            missing:
-                'Enter a name, every required secret and your current password.',
+            missing: 'Enter every required secret and your current password.',
             missingPassword: 'Enter your current password.',
             created: 'Credentials “{name}” saved',
             updated: 'Credentials “{name}” updated',

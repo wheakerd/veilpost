@@ -96,6 +96,7 @@ export interface Certificate {
     email: string
     dnsCredentialId: string
     dnsCredentialName: string
+    dnsCredentialProvider: DnsProvider
     status: CertificateStatus
     issuing: boolean
     issuer: string | null
@@ -144,7 +145,6 @@ function parseCredential(data: unknown): DnsCredential {
         typeof data.id !== 'string' ||
         !idPattern.test(data.id) ||
         typeof data.name !== 'string' ||
-        !data.name ||
         !isOneOf(dnsProviders, data.provider) ||
         !isRecord(data.fields) ||
         !isCount(data.certificates) ||
@@ -204,6 +204,7 @@ function parseCertificate(data: unknown): Certificate {
         typeof data.dnsCredentialId !== 'string' ||
         !idPattern.test(data.dnsCredentialId) ||
         typeof data.dnsCredentialName !== 'string' ||
+        !isOneOf(dnsProviders, data.dnsCredentialProvider) ||
         !isOneOf(certificateStatuses, data.status) ||
         typeof data.issuing !== 'boolean' ||
         !(data.issuer === null || typeof data.issuer === 'string') ||
@@ -223,6 +224,7 @@ function parseCertificate(data: unknown): Certificate {
         email: data.email,
         dnsCredentialId: data.dnsCredentialId,
         dnsCredentialName: data.dnsCredentialName,
+        dnsCredentialProvider: data.dnsCredentialProvider,
         status: data.status,
         issuing: data.issuing,
         issuer: data.issuer,

@@ -56,6 +56,7 @@ Status: design confirmed (2026-11-22). Localization, the software store, and cer
 ### DNS provider credentials
 
 - A new table `dns_credentials(id, name, provider, secrets, created_at, updated_at)`. `secrets` is encrypted as a whole with `master.key`; neither the API nor the logs return the plaintext, and the interface shows only whether it is set and when it was last changed.
+- `name` is an optional note ("Note (optional)" in the interface), limited to 64 Unicode characters after trimming. Existing names remain notes and can be cleared. Credential lists, certificate selectors, and certificate lists share one display rule: show the note, or the localized provider name when empty. Empty notes remain empty in storage, and the credential list omits duplicate provider subtitles. Certificate responses include the current note and provider so subsequent queries reflect edits.
 - Fields required by each provider: Cloudflare (API Token), Alibaba Cloud (AccessKey ID / AccessKey Secret), Tencent Cloud DNSPod (SecretId / SecretKey), AWS Route 53 (Access Key ID / Secret Access Key / region, optional Hosted Zone ID).
 - Adding, changing, and deleting credentials require entering the password again; credentials referenced by a certificate cannot be deleted (`409 CREDENTIAL_IN_USE`).
 - A "Verify" action is provided: it calls the provider's read-only API to confirm that the credentials work, without creating any DNS records.

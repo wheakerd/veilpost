@@ -19,7 +19,7 @@ DNS-01 验证申请证书，并在后台自动续期。接口由 Go 后端 `app/
 ```ts
 interface DnsCredential {
     id: string // 22 位 base64url 随机标识
-    name: string
+    name: string // 可选备注；未填写时为空字符串
     provider: 'cloudflare' | 'alidns' | 'tencentcloud' | 'route53'
     fields: Record<string, boolean> // 每个字段是否已保存；从不返回值
     certificates: number // 引用该凭据的证书数
@@ -50,6 +50,7 @@ interface DnsCredential {
 | `POST /api/dns-credentials/:id/delete` | `{ password }`                          | `204`                                  |
 | `POST /api/dns-credentials/:id/verify` | `{}`                                    | `200 { status: 'ok' }`                 |
 
+- `name` 为可选备注：去除首尾空白后最多 64 个 Unicode 字符，不允许控制字符及行/段落分隔符。未填写或全空白时存储为 `""`，修改时也可用空值清除已有备注。界面各处的凭据标签统一显示备注，空备注则显示本地化服务商名称；此回退仅用于显示。
 - 新增、修改、删除都需要当前密码，与账号安全操作共用按会话的限流（5 分钟 15 次）。密码错误返回 `403 INVALID_PASSWORD`，不改变任何数据。
 - 修改时服务商不能改变。`secrets` 中非空的值替换该字段，空字符串清除可选字段（必填字段为空返回 `INVALID_SECRETS`
   ），未出现的字段保持原值。界面只发送用户填写过的字段，从不读取已保存的值。
@@ -71,7 +72,8 @@ interface Certificate {
     directoryUrl: string // https:// ACME 目录地址
     email: string // ACME 账户联系邮箱，可为空
     dnsCredentialId: string
-    dnsCredentialName: string
+    dnsCredentialName: string // 当前可选备注，可为空
+    dnsCredentialProvider: 'cloudflare' | 'alidns' | 'tencentcloud' | 'route53'
     status: 'pending' | 'valid' | 'failed' | 'expired'
     issuing: boolean // 本进程中有签发或续期任务排队或运行
     issuer: string | null // 叶证书签发者的组织名（无则 CN）
@@ -84,6 +86,7 @@ interface Certificate {
 }
 ```
 
+- `dnsCredentialName` 和 `dnsCredentialProvider` 每次查询都从关联凭据读取当前值，修改或清空备注后立即反映在查询结果中。证书列表与凭据列表、选择框使用相同的备注/服务商显示规则。
 - `pending`：首次签发排队或进行中。`valid`：已签发且未过期。`failed`：首次签发失败，等待手动重新签发。`expired`
   ：证书已过期（续期一直失败时会出现）。
 - 续期期间状态保持 `valid`，`issuing` 为 `true`；界面显示“续期中”。
@@ -143,23 +146,23 @@ interface Certificate {
 
 ## 错误码
 
-| 错误码                    | 状态 | 含义                                 |
-| ------------------------- | ---- | ------------------------------------ |
-| `INVALID_CREDENTIAL_NAME` | 400  | 名称为空、超过 64 字符或含控制字符   |
-| `INVALID_PROVIDER`        | 400  | 不支持的服务商                       |
-| `INVALID_SECRETS`         | 400  | 字段缺失、未知或格式不正确           |
-| `CREDENTIAL_NOT_FOUND`    | 404  | 凭据不存在                           |
-| `CREDENTIAL_IN_USE`       | 409  | 凭据被证书引用，不能删除             |
-| `CREDENTIAL_UNREADABLE`   | 409  | 已保存的凭据无法解密（需要重新填写） |
-| `CREDENTIAL_REJECTED`     | 422  | 验证凭据时服务商拒绝                 |
-| `PROVIDER_UNREACHABLE`    | 424  | 验证凭据时无法连接服务商             |
-| `INVALID_DOMAIN`          | 400  | 域名不合法                           |
-| `TOO_MANY_DOMAINS`        | 400  | 超过 100 个名称                      |
-| `INVALID_DIRECTORY`       | 400  | ACME 服务或目录地址不合法            |
-| `INVALID_EMAIL`           | 400  | 联系邮箱不合法                       |
-| `INVALID_EAB`             | 400  | EAB 不完整、格式错误或用于内置目录   |
-| `CERTIFICATE_NOT_FOUND`   | 404  | 证书不存在                           |
-| `CERTIFICATE_NOT_ISSUED`  | 409  | 证书尚未签发，无法下载证书链         |
+| 错误码                    | 状态 | 含义                                                   |
+| ------------------------- | ---- | ------------------------------------------------------ |
+| `INVALID_CREDENTIAL_NAME` | 400  | 备注超过 64 个 Unicode 字符或含控制字符、行/段落分隔符 |
+| `INVALID_PROVIDER`        | 400  | 不支持的服务商                                         |
+| `INVALID_SECRETS`         | 400  | 字段缺失、未知或格式不正确                             |
+| `CREDENTIAL_NOT_FOUND`    | 404  | 凭据不存在                                             |
+| `CREDENTIAL_IN_USE`       | 409  | 凭据被证书引用，不能删除                               |
+| `CREDENTIAL_UNREADABLE`   | 409  | 已保存的凭据无法解密（需要重新填写）                   |
+| `CREDENTIAL_REJECTED`     | 422  | 验证凭据时服务商拒绝                                   |
+| `PROVIDER_UNREACHABLE`    | 424  | 验证凭据时无法连接服务商                               |
+| `INVALID_DOMAIN`          | 400  | 域名不合法                                             |
+| `TOO_MANY_DOMAINS`        | 400  | 超过 100 个名称                                        |
+| `INVALID_DIRECTORY`       | 400  | ACME 服务或目录地址不合法                              |
+| `INVALID_EMAIL`           | 400  | 联系邮箱不合法                                         |
+| `INVALID_EAB`             | 400  | EAB 不完整、格式错误或用于内置目录                     |
+| `CERTIFICATE_NOT_FOUND`   | 404  | 证书不存在                                             |
+| `CERTIFICATE_NOT_ISSUED`  | 409  | 证书尚未签发，无法下载证书链                           |
 
 另有通用的 `SESSION_EXPIRED`、`INVALID_PASSWORD`、`TOO_MANY_ATTEMPTS`、`REQUEST_FAILED`、`SERVICE_UNAVAILABLE`。所有错误码在四种语言的
 `src/locales/<语言>/errors.ts` 中都有文本；签发错误类别的文本在 `certs.ts` 的 `certificates.issueErrors`。客户端把带

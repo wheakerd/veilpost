@@ -82,10 +82,10 @@ var Providers = map[string][]field{
 	},
 }
 
-// validName trims a display name and accepts 1–64 printable characters.
+// validName trims an optional credential note and accepts up to 64 printable characters.
 func validName(name string) (string, bool) {
 	name = strings.TrimSpace(name)
-	if name == "" || !utf8.ValidString(name) || utf8.RuneCountInString(name) > 64 {
+	if !utf8.ValidString(name) || utf8.RuneCountInString(name) > 64 {
 		return "", false
 	}
 	for _, r := range name {

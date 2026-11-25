@@ -29,7 +29,7 @@ const errors = {
     SETTING_REQUIRED: '还有必填的配置项未填写。',
     UNKNOWN_SETTING: '配置中包含该软件不支持的项目，请刷新页面后重试。',
     INVALID_CREDENTIAL_NAME:
-        '凭据名称需为 1–64 个字符，且不能包含换行等控制字符。',
+        '凭据备注最多 64 个字符，且不能包含换行等控制字符。',
     INVALID_PROVIDER: '不支持该 DNS 服务商。',
     INVALID_SECRETS: '凭据字段不完整或格式不正确，请检查后重试。',
     CREDENTIAL_NOT_FOUND: 'DNS 服务商凭据不存在，请刷新列表后重试。',

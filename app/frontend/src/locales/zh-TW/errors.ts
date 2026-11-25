@@ -28,7 +28,7 @@ export default {
     SETTING_REQUIRED: '還有必填的設定項目未填寫。',
     UNKNOWN_SETTING: '設定中包含該軟體不支援的項目，請重新整理頁面後重試。',
     INVALID_CREDENTIAL_NAME:
-        '憑據名稱需為 1–64 個字元，且不能包含換行等控制字元。',
+        '憑據備註最多 64 個字元，且不能包含換行等控制字元。',
     INVALID_PROVIDER: '不支援此 DNS 服務商。',
     INVALID_SECRETS: '憑據欄位不完整或格式不正確，請檢查後重試。',
     CREDENTIAL_NOT_FOUND: 'DNS 服務商憑據不存在，請重新整理列表後重試。',

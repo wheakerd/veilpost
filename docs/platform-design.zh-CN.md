@@ -56,6 +56,7 @@
 ### DNS 服务商凭据
 
 - 新表 `dns_credentials(id, name, provider, secrets, created_at, updated_at)`。`secrets` 整体用 `master.key` 加密；接口和日志都不返回明文，界面只显示是否已设置和最后修改时间。
+- `name` 为可选备注（界面标签“备注（可选）”），去除首尾空白后最多 64 个 Unicode 字符。已有名称作为备注保留并可清空。凭据列表、证书选择框和证书列表采用统一显示规则：有备注显示备注，空备注显示本地化服务商名称。空备注在存储中保持为空，凭据列表省略重复的服务商副标题。证书响应包含当前备注和服务商，后续查询会反映修改。
 - 各家需要的字段：Cloudflare（API Token）、阿里云（AccessKey ID / AccessKey Secret）、腾讯云 DNSPod（SecretId / SecretKey）、AWS Route 53（Access Key ID / Secret Access Key / 区域，可选 Hosted Zone ID）。
 - 新增、修改、删除凭据需要重新输入密码；被证书引用的凭据不能删除（`409 CREDENTIAL_IN_USE`）。
 - 提供“验证凭据”操作：调用服务商的只读接口确认可用，不创建任何 DNS 记录。

@@ -8,6 +8,7 @@ import {
     ref,
 } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { credentialLabel } from '@/i18n/certs'
 import Key from '~icons/lucide/key-round'
 import Plus from '~icons/lucide/plus'
 import PageIntro from '@/components/PageIntro.vue'
@@ -166,7 +167,7 @@ async function submit() {
             !values[field.name] &&
             !(editing && isSet(editing, field.name)),
     )
-    if (!name.value.trim() || !password.value || missing) {
+    if (!password.value || missing) {
         error.value = t('certs.dns.form.missing')
         return
     }
@@ -188,7 +189,7 @@ async function submit() {
         closeForms()
         notice.value = t(
             editing ? 'certs.dns.form.updated' : 'certs.dns.form.created',
-            { name: saved.name },
+            { name: credentialLabel(saved.name, saved.provider) },
         )
         await load()
     } catch (cause) {
@@ -225,7 +226,9 @@ async function submitDelete() {
     try {
         await certsApi.deleteCredential(credential.id, password.value)
         closeForms()
-        notice.value = t('certs.dns.delete.done', { name: credential.name })
+        notice.value = t('certs.dns.delete.done', {
+            name: credentialLabel(credential.name, credential.provider),
+        })
         await load()
     } catch (cause) {
         password.value = ''
@@ -251,7 +254,9 @@ async function verify(credential: DnsCredential) {
     verifying.value = credential.id
     try {
         await certsApi.verifyCredential(credential.id)
-        notice.value = t('certs.dns.verify.done', { name: credential.name })
+        notice.value = t('certs.dns.verify.done', {
+            name: credentialLabel(credential.name, credential.provider),
+        })
     } catch (cause) {
         await handleError(cause)
     } finally {
@@ -330,7 +335,10 @@ onBeforeUnmount(() => {
                             {{
                                 mode.kind === 'edit'
                                     ? t('certs.dns.form.editTitle', {
-                                          name: mode.credential.name,
+                                          name: credentialLabel(
+                                              mode.credential.name,
+                                              mode.credential.provider,
+                                          ),
                                       })
                                     : t('certs.dns.form.createTitle')
                             }}
@@ -351,7 +359,6 @@ onBeforeUnmount(() => {
                             id="credential-name"
                             v-model="name"
                             type="text"
-                            maxlength="64"
                             autocomplete="off"
                             :disabled="busy"
                         />
@@ -472,8 +479,13 @@ onBeforeUnmount(() => {
                             aria-hidden="true"
                         ></span>
                         <div class="node-name">
-                            <strong>{{ credential.name }}</strong>
-                            <small>{{
+                            <strong>{{
+                                credentialLabel(
+                                    credential.name,
+                                    credential.provider,
+                                )
+                            }}</strong>
+                            <small v-if="credential.name.trim()">{{
                                 t(`certs.dns.providers.${credential.provider}`)
                             }}</small>
                         </div>
@@ -527,7 +539,15 @@ onBeforeUnmount(() => {
                             >
                         </div>
                     </Reveal>
-                    <ul class="secret-status" :aria-label="credential.name">
+                    <ul
+                        class="secret-status"
+                        :aria-label="
+                            credentialLabel(
+                                credential.name,
+                                credential.provider,
+                            )
+                        "
+                    >
                         <li
                             v-for="field in providerFields[credential.provider]"
                             :key="field.name"
