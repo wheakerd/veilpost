@@ -1,70 +1,88 @@
-# Veilpost
-
-A self-hosted control console for multi-protocol VPN nodes.
+# <img src="docs/assets/veilpost-icon.svg" width="32" height="32" alt=""> Veilpost
 
 English | [简体中文](README.zh-CN.md)
 
-A Vue frontend, a Go + Gin backend, and a Docker Compose development environment. Sign-in, session restoration, TOTP two-step verification, recovery codes, and account security settings all call the real backend; there is no default account and no mock authentication. The interface uses Liquid Glass after iOS 26, with light and dark modes and eight theme colors. The sign-in page shows a slowly rotating wireframe globe, and the console has collapsible groups, a sidebar that can be resized by dragging, a toolbar, and a tab bar of open pages. The "Preferences" drawer offers theme color, vision mode (including color-safe and grayscale), liquid glass, page transitions, the tab bar, the loading bar, page state caching, and other options. The interface supports 简体中文, English, 繁體中文, and Русский: it follows the browser language by default, can be switched in "Preferences", and the choice is saved only in the current browser. The software store enables VPN software from the built-in catalog shipped with the console (Xray-core, Hysteria 2, AmneziaWG) and configures it in the console; deployment to nodes will come with node phase 2. Certificates are requested through ACME (Let's Encrypt by default, with a custom directory and EAB available) and DNS-01 and renewed automatically, with support for Cloudflare, Alibaba Cloud DNS, Tencent Cloud DNSPod, and AWS Route 53. Credentials and private keys are stored encrypted with `master.key`, and the backend needs access to the ACME service and the API of the chosen DNS provider. Node phase 1 is implemented: create a node on the "VPN nodes" page to get a one-time enrollment token, and once `veilpost-agent` on the node enrolls, it reports its online status through signed long polling.
+![Veilpost promotional card with a wireframe globe](docs/assets/veilpost-card.png)
 
-## Continue development with Docker
+Veilpost is a self-hosted console for multi-protocol VPN nodes. Use it to enroll nodes, view their online status, save VPN software settings, and manage TLS certificates.
+
+## Quick start
+
+You'll need Git, Docker with the Compose plugin, GNU Make, and Python 3.11 or newer.
 
 ```bash
-make start          # Build and start the frontend and backend, wait for health checks, open the default browser
-make status         # Show container status and the actual access URL
-make admin-create   # Interactive creation in a terminal; a random password is generated in non-interactive environments
-make admin-reset-password USERNAME=admin   # Reset a forgotten password and revoke all sessions of the account
-make admin-reset-two-factor USERNAME=admin # Remove two-step verification when both the authenticator and recovery codes are lost
-make logs
-make restart        # Rebuild and recreate the containers, keeping account and session data
-make stop           # Stop this project's containers, keeping the data volume
+git clone https://github.com/wheakerd/veilpost.git
+cd veilpost
+make start
+make admin-create
 ```
 
-The default entry point is <http://127.0.0.1:3000>. Use `FRONTEND_PORT=0 make start` to let Docker assign the frontend host port; `OPEN_BROWSER=false make start` turns off opening the browser automatically. Frontend source is bind-mounted to provide HMR; after changing backend source, run `make restart`.
+`make start` builds the frontend and backend and waits for both services to be ready. Enter a username and password at the `make admin-create` prompts, then sign in at the default address, <http://127.0.0.1:3000>.
 
-In a terminal you can also run `make admin-create GENERATE_PASSWORD=1 USERNAME=admin` to generate a 64-character random password and create the account. This command runs POSIX shell directly and does not depend on Python; you can also run `GENERATE_PASSWORD=1 sh scripts/admin-create.sh`. The password is generated with the system `openssl rand -hex 32`. When a tool is missing, the script reads the Linux `os-release`, installs the required OpenSSL/coreutils through apt-get, dnf/yum, apk, pacman, or zypper, then checks the tools again and continues. Installation needs root or a working sudo; non-interactive runs use `sudo -n`, and the script exits with a clear message when permissions are insufficient or installation fails.
+To generate a random password, run `make admin-create GENERATE_PASSWORD=1 USERNAME=admin`. The command displays the credentials file path under `.runtime/admin-credentials/` by default. Save the password in your password manager and delete the file.
 
-In generated mode the account name defaults to `admin`. No account is preset, and existing accounts are never overwritten and their passwords never reset. The password is passed to the backend on standard input and saved only to the text file under `.runtime/admin-credentials/` that the command output points to (directory mode `700`, file mode `600`, ignored by Git); it is not printed to the terminal or logs. `VPN_CREDENTIALS_DIR` can name another private directory. Save the password in a password manager, then delete the local plaintext file. If the creation result is not confirmed, the file is kept and the command does not retry automatically. Password resets use the same password input and storage method.
+## Console workflows
 
-When running the binary directly in production, set `VPN_API_BIN` and a `VPN_DATA_DIR` that matches the service; release packages include the same shell script, so Python, Node, and the Go SDK do not need to be installed. See the [release documentation](docs/releasing.md) for examples. The other development and packaging commands still use Python.
+### Enroll a VPN node
 
-Containers communicate through `backend:8080`; the backend's host port is assigned by Docker and bound to `127.0.0.1` only. The project name defaults to `veilpost-dev`, and the stack does not start or modify the reference deployments in `docker/soft-router/`.
+Open the console at an address the node can reach, using HTTPS for remote nodes. In **VPN nodes**, create an entry and run the displayed enrollment command on the node host. Enter the one-time token when prompted, then run `veilpost-agent run`. The node list shows its online status, last contact time, and agent version.
 
-The Make launcher uses the project's existing Go module cache to speed up image builds and verifies it again inside the image; when Docker Compose is used directly, locked dependencies are fetched from the network starting with an empty cache.
+### Configure VPN software
 
-Authentication data, including the SQLite database and the encryption key, is stored in a separate `auth-data` named volume. Recreating containers does not clear user data. Do not delete this volume; for backups, stop the backend and save both the database and `master.key`.
+In **Store**, enable Xray-core, Hysteria 2, or AmneziaWG from the built-in catalog. Open the app's page to edit and save its settings in the console.
 
-## Checks, builds, and releases
+### Request a TLS certificate
+
+Add credentials in **DNS providers** that can manage records for your domains. Supported providers are Cloudflare, Alibaba Cloud DNS, Tencent Cloud DNSPod, and AWS Route 53.
+
+In **Certificates**, enter the domains, select the credentials, and submit the request. Veilpost validates domains with ACME DNS-01 and renews certificates automatically. It uses Let's Encrypt by default and supports custom ACME directories.
+
+### Set up your account and interface
+
+In **Account security**, enable TOTP two-step verification and save your recovery codes. In **Preferences**, choose a theme, vision mode, or interface language. Veilpost follows your browser's language by default and supports 简体中文, English, 繁體中文, and Русский.
+
+## Run and maintain the development stack
+
+| Task                                      | Command        |
+| ----------------------------------------- | -------------- |
+| Show service status and the current URL   | `make status`  |
+| View frontend and backend logs            | `make logs`    |
+| Rebuild and restart after backend changes | `make restart` |
+| Stop the stack                            | `make stop`    |
+
+Frontend changes appear through hot module replacement. Run `FRONTEND_PORT=0 make start` to let Docker choose a host port. To open the browser manually, start with `OPEN_BROWSER=false make start`.
+
+Compose stores backend data in the `auth-data` volume. Stop the stack before backing up the entire volume, including `auth.sqlite` and `master.key`.
+
+### Recover administrator access
+
+- Reset a forgotten password with `make admin-reset-password USERNAME=admin`.
+- If you lose the authenticator and recovery codes, turn off two-step verification with `make admin-reset-two-factor USERNAME=admin`.
+
+Replace `admin` with the account's username. Both commands revoke the account's existing sessions.
+
+## Develop and package
+
+Local checks use the repository's pinned Go, Node, and Bun versions and a C compiler. Install dependencies and Playwright Chromium, then run the checks.
 
 ```bash
 make install
-PLAYWRIGHT_CHANNEL=chrome make check
-make build
-make release VERSION=v0.1.0
+(cd app/frontend && bunx playwright install chromium)
+make check
 ```
 
-Local checks need Go, Node, Bun, and Python; see each subproject's configuration for versions. Browser tests start a real Go + SQLite service with a separate temporary database and random test accounts; there is no MSW or Playwright request interception.
+To run the browser tests with an installed Chrome, use `PLAYWRIGHT_CHANNEL=chrome make check`.
 
-GitHub Actions runs checks on branch pushes and PRs. After a version tag is pushed, the frontend package, the Linux amd64 / arm64 backend packages, and checksums are published only if the checks pass. See [Development and releases](docs/releasing.md) for details.
+After installing dependencies, use `make native-start` and `make native-stop` for native debugging. Native mode uses a separate data directory. Stop the current stack before switching modes to free the default frontend port, 3000.
 
-## Native development
+Run `make build` to generate the frontend assets and the `veilpost-api` and `veilpost-agent` binaries. `make release VERSION=v0.1.0` creates versioned archives and checksums in `dist/releases/v0.1.0/`, with Linux `amd64` and `arm64` builds for the API server and the node agent. Pushing a version tag triggers the GitHub Actions release workflow, which runs CI before publishing the archives.
 
-When you need native debugging, use `make native-start`, `make native-status`, `make native-restart`, and `make native-stop`. The backend uses a random port assigned by the system, which is then passed to the frontend on the command line; native mode uses a data directory separate from Compose. Both modes use frontend port 3000 by default, so stop one mode before switching to the other.
+## Documentation
 
-## Structure and boundaries
-
-```text
-app/frontend/     Vue interface, real API clients, browser tests
-app/backend/      Gin API, SQLite authentication and node storage, administrator commands and tests
-app/agent/        veilpost-agent node agent (Go, no CGO)
-compose.yaml      Frontend and backend development orchestration, separate network and named volume
-docker/frontend/  Frontend development image and Nginx reference
-docker/backend/   Go build and backend runtime image
-docker/soft-router/  Sanitized VPN deployment reference configuration
-docker/node/      Node images (AmneziaWG built from pinned upstream sources; not started by the development environment)
-scripts/          Start/stop, test, and release scripts
-.github/          CI and tag release workflows
-```
-
-The real backend currently covers authentication, health checks, and node enrollment and online status; VPN configuration delivery, entry protocols, and monitoring are not implemented yet. When there are no nodes, the nodes page keeps its real not-connected state and shows no fictional data. See the [node feature design](docs/nodes-design.md).
-
-Reference documents: [frontend](app/frontend/README.md), [backend](app/backend/README.md), [authentication contract](app/frontend/docs/auth-api.md), [node contract](app/frontend/docs/nodes-api.md), [agent](app/agent/README.md). The placeholders in the VPN deployment reference configuration are described in [docker/soft-router](docker/soft-router/README.md), and file integrity can be checked with `python3 scripts/verify-docker-copy.py`.
+| Topic                                   | Guides                                                                                                                                                                                                          |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Console, API server, and node agent     | [Frontend](app/frontend/README.md) · [Backend configuration and data](app/backend/README.md) · [Agent usage](app/agent/README.md)                                                                               |
+| Toolchains, deployment packages, and CI | [Development and releases](docs/releasing.md)                                                                                                                                                                   |
+| Feature design                          | [Node enrollment and control channel](docs/nodes-design.md) · [Store, certificates, and localization](docs/platform-design.md)                                                                                  |
+| HTTP API contracts                      | [Authentication](app/frontend/docs/auth-api.md) · [Nodes and agent](app/frontend/docs/nodes-api.md) · [Store](app/frontend/docs/apps-api.md) · [Certificates and DNS providers](app/frontend/docs/certs-api.md) |
+| VPN deployment references               | [Soft-router configurations](docker/soft-router/README.md) · [AmneziaWG node image](docker/node/amneziawg/README.md)                                                                                            |

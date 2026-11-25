@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="veilpost-title">
+    <title id="veilpost-title">Veilpost</title>
+    <defs>
+        <linearGradient id="indigo" x1="9" y1="4" x2="86" y2="94" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#5b5ff3"/>
+            <stop offset=".52" stop-color="#4b4ee6"/>
+            <stop offset="1" stop-color="#3b39b9"/>
+        </linearGradient>
+    </defs>
+    <rect x="1.5" y="1.5" width="93" height="93" rx="22" fill="url(#indigo)" stroke="#a0a4ff" stroke-opacity=".46"/>
+    <path fill="#fbfaff" d="M20 25.5h14.6l13.45 31.22 9.18-21.29H71.6L54.64 74.03A4.95 4.95 0 0 1 50.12 77h-4.5a4.95 4.95 0 0 1-4.5-2.95Z"/>
+    <circle cx="70.8" cy="23.1" r="6.2" fill="#f98de0"/>
+</svg>
