@@ -18,6 +18,8 @@ export default {
     NODE_NOT_FOUND: '節點不存在，請重新整理列表後再試。',
     NODE_NOT_PENDING: '節點已完成註冊或已撤銷，無法重新簽發註冊權杖。',
     NODE_NOT_REVOKED: '只能刪除已撤銷的節點，請先撤銷。',
+    DOCKER_SOURCE_UNAVAILABLE: '該節點目前無法使用所選 Docker 軟體來源。',
+    DOCKER_INSTALL_BUSY: '該節點已有 Docker 安裝工作。',
     APP_NOT_FOUND: '軟體目錄中沒有這個軟體。',
     APP_NOT_INSTALLED: '該軟體尚未安裝，請先在軟體商店中安裝。',
     APP_ALREADY_INSTALLED: '該軟體已經安裝。',

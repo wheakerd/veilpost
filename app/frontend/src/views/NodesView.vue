@@ -10,7 +10,7 @@ import Reveal from '@/components/Reveal.vue'
 import PasswordField from '@/components/PasswordField.vue'
 import AuthFeedback from '@/components/AuthFeedback.vue'
 import { AuthApiError, authErrorMessage } from '@/api/auth'
-import { nodesApi, type VpnNode } from '@/api/nodes'
+import { nodesApi, type DockerInstallation, type VpnNode } from '@/api/nodes'
 import { useSessionExpiry } from '@/composables/useSessionExpiry'
 import { formatDateTime, formatNumber, formatSince } from '@/i18n/format'
 import { useCachedPage } from '@/composables/useCachedPage'
@@ -26,14 +26,16 @@ const unavailable = ref(false)
 const creating = ref(false)
 const name = ref('')
 const password = ref('')
-type NodeAction = 'reissue' | 'revoke' | 'delete'
+type NodeAction = 'reissue' | 'revoke' | 'delete' | 'docker'
 // The node action form open below a node, if any; each needs the password.
 const action = ref<{ node: VpnNode; kind: NodeAction } | null>(null)
 const actionType = {
     reissue: 'primary',
     revoke: 'danger',
     delete: 'danger',
+    docker: 'primary',
 } as const
+const dockerSource = ref('')
 const busy = ref(false)
 const error = ref('')
 const notice = ref('')
@@ -114,6 +116,23 @@ function detail(node: VpnNode) {
         : t('nodes.detail.neverSeen')
 }
 
+function dockerJobDetail(job: DockerInstallation) {
+    return t('nodes.docker.job', {
+        source: job.source,
+        status: t(`nodes.docker.states.${job.status}`),
+    })
+}
+
+function canInstallDocker(node: VpnNode) {
+    const status = node.docker?.job?.status
+    return (
+        !unavailable.value &&
+        node.online &&
+        status !== 'queued' &&
+        status !== 'running'
+    )
+}
+
 function clearSecrets() {
     password.value = ''
     enrollment.value = null
@@ -123,6 +142,7 @@ function closeForms() {
     creating.value = false
     action.value = null
     name.value = ''
+    dockerSource.value = ''
     password.value = ''
     error.value = ''
 }
@@ -243,6 +263,7 @@ async function openAction(node: VpnNode, kind: NodeAction) {
     closeForms()
     notice.value = ''
     action.value = { node, kind }
+    if (kind === 'docker') dockerSource.value = node.docker?.sources[0] ?? ''
     await nextTick()
     document.getElementById('node-action-password')?.focus()
 }
@@ -251,6 +272,10 @@ async function submitAction() {
     if (busy.value || !action.value) return
     const { node, kind } = action.value
     error.value = ''
+    if (kind === 'docker' && !dockerSource.value) {
+        error.value = t('nodes.docker.missingSource')
+        return
+    }
     if (!password.value) {
         error.value = t('nodes.form.missingPassword')
         return
@@ -267,6 +292,15 @@ async function submitAction() {
         if (kind === 'revoke') {
             const revoked = await nodesApi.revoke(node.id, password.value)
             notice.value = t('nodes.revoke.done', { name: revoked.name })
+        } else if (kind === 'docker') {
+            const updated = await nodesApi.installDocker(
+                node.id,
+                dockerSource.value,
+                password.value,
+            )
+            notice.value = t('nodes.docker.queuedNotice', {
+                name: updated.name,
+            })
         } else {
             await nodesApi.remove(node.id, password.value)
             notice.value = t('nodes.delete.done', { name: node.name })
@@ -537,6 +571,17 @@ onBeforeUnmount(() => {
                                         <div>
                                             <strong>{{ node.name }}</strong>
                                             <small>{{ detail(node) }}</small>
+                                            <small v-if="node.docker?.job">{{
+                                                dockerJobDetail(node.docker.job)
+                                            }}</small>
+                                            <small
+                                                v-if="node.docker?.job?.error"
+                                                >{{
+                                                    t(
+                                                        `nodes.docker.errors.${node.docker.job.error}`,
+                                                    )
+                                                }}</small
+                                            >
                                         </div>
                                     </div>
                                 </td>
@@ -574,6 +619,20 @@ onBeforeUnmount(() => {
                                         v-if="action?.node.id !== node.id"
                                         class="row-actions"
                                     >
+                                        <ElButton
+                                            v-if="
+                                                node.status === 'active' &&
+                                                node.docker?.sources.length
+                                            "
+                                            size="small"
+                                            :disabled="
+                                                busy || !canInstallDocker(node)
+                                            "
+                                            @click="openAction(node, 'docker')"
+                                            >{{
+                                                t('nodes.docker.open')
+                                            }}</ElButton
+                                        >
                                         <ElButton
                                             v-if="node.status === 'pending'"
                                             size="small"
@@ -619,6 +678,31 @@ onBeforeUnmount(() => {
                                                     )
                                                 }}
                                             </p>
+                                            <div
+                                                v-if="action.kind === 'docker'"
+                                                class="form-field"
+                                            >
+                                                <label
+                                                    for="node-docker-source"
+                                                    >{{
+                                                        t('nodes.docker.source')
+                                                    }}</label
+                                                >
+                                                <ElSelect
+                                                    id="node-docker-source"
+                                                    v-model="dockerSource"
+                                                    :disabled="busy"
+                                                >
+                                                    <ElOption
+                                                        v-for="source in node
+                                                            .docker?.sources ??
+                                                        []"
+                                                        :key="source"
+                                                        :label="source"
+                                                        :value="source"
+                                                    />
+                                                </ElSelect>
+                                            </div>
                                             <PasswordField
                                                 id="node-action-password"
                                                 v-model="password"

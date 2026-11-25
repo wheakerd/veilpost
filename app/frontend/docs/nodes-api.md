@@ -2,7 +2,7 @@
 
 English | [简体中文](nodes-api.zh-CN.md)
 
-Corresponds to phase 1 of the [node design](../../../docs/nodes-design.md): node enrollment and the control channel. The console only registers nodes, issues single-use enrollment tokens, verifies the agent's signed requests, and records online status; this phase does not deliver VPN configuration and does not manage any containers.
+The console registers nodes, issues single-use enrollment tokens, verifies signed agent requests, and records online status. An opted-in agent can also receive Docker Engine installation jobs. [Node design](../../../docs/nodes-design.md)
 
 The API is implemented by the Go backend (`app/backend/internal/nodes`); the agent is `veilpost-agent` in `app/agent`. Both parts share the signature format below and pin the same known-answer signature vector in their respective Go tests.
 
@@ -24,6 +24,23 @@ interface VpnNode {
     revokedAt: string | null
     lastSeenAt: string | null
     enrollmentExpiresAt: string | null
+    docker?: {
+        sources: string[]
+        job?: {
+            id: string
+            source: string
+            status:
+                | 'queued'
+                | 'running'
+                | 'succeeded'
+                | 'already_installed'
+                | 'failed'
+                | 'expired'
+                | 'unknown'
+            updatedAt: string
+            error?: 'source_unavailable' | 'install_failed' | 'timed_out'
+        }
+    }
 }
 ```
 
@@ -35,13 +52,14 @@ interface VpnNode {
 
 ### Endpoints
 
-| Method and path                  | JSON request body    | Success response                                |
-| -------------------------------- | -------------------- | ----------------------------------------------- |
-| `GET /api/nodes`                 | —                    | `200 { nodes: VpnNode[] }`                      |
-| `POST /api/nodes`                | `{ name, password }` | `201 { node: VpnNode, enrollment: Enrollment }` |
-| `POST /api/nodes/:id/revoke`     | `{ password }`       | `200 { node: VpnNode }`                         |
-| `POST /api/nodes/:id/enrollment` | `{ password }`       | `200 { node: VpnNode, enrollment: Enrollment }` |
-| `POST /api/nodes/:id/delete`     | `{ password }`       | `204` (no response body)                        |
+| Method and path                      | JSON request body      | Success response                                |
+| ------------------------------------ | ---------------------- | ----------------------------------------------- |
+| `GET /api/nodes`                     | —                      | `200 { nodes: VpnNode[] }`                      |
+| `POST /api/nodes`                    | `{ name, password }`   | `201 { node: VpnNode, enrollment: Enrollment }` |
+| `POST /api/nodes/:id/revoke`         | `{ password }`         | `200 { node: VpnNode }`                         |
+| `POST /api/nodes/:id/enrollment`     | `{ password }`         | `200 { node: VpnNode, enrollment: Enrollment }` |
+| `POST /api/nodes/:id/delete`         | `{ password }`         | `204` (no response body)                        |
+| `POST /api/nodes/:id/docker/install` | `{ source, password }` | `202 { node: VpnNode }`                         |
 
 ```ts
 interface Enrollment {
@@ -56,6 +74,8 @@ interface Enrollment {
 - Reissue: applies only to `pending` nodes and requires the current password. All previous unused enrollment tokens of the node are invalidated immediately; the new token is valid for 15 minutes and appears only in this response. A node that is already enrolled or revoked returns `409 NODE_NOT_PENDING`.
 - Delete: applies only to `revoked` nodes and requires the current password. The node record, its enrollment tokens, and its nonce records are deleted together and cannot be restored. A node that is not revoked returns `409 NODE_NOT_REVOKED`; a nonexistent node returns `404 NODE_NOT_FOUND`.
 - Create, revoke, reissue, and delete share the password-confirmation rate limit of "15 per session per 5 minutes" with account security operations; exceeding it returns `429 TOO_MANY_ATTEMPTS`.
+- Install Docker Engine: the node must be active and online and have advertised the selected source. The current password is required and uses the same confirmation limit. A source that the node cannot use returns `409 DOCKER_SOURCE_UNAVAILABLE`. An existing queued or running job returns `409 DOCKER_INSTALL_BUSY`.
+- The latest job is returned in `node.docker.job`. Queued jobs expire after five minutes. A job with no final report after 20 minutes of running is shown as `unknown`. `updatedAt` records the last stored transition.
 - Unknown fields, multiple JSON values, or a request body larger than 8 KiB return `400 REQUEST_FAILED`; a missing `Origin`, custom request header, or JSON content type returns `403 REQUEST_FAILED`.
 
 ### Frontend requirements
@@ -145,14 +165,26 @@ Server check order:
 {
     agentVersion: string
     configVersion: number
+    docker?: {
+        sources: string[]
+        busy?: boolean
+        result?: {
+            id: string
+            status: 'succeeded' | 'already_installed' | 'failed'
+            error?: 'source_unavailable' | 'install_failed' | 'timed_out'
+        }
+    }
 }
 // 200 response
 {
     configVersion: number
+    dockerInstall?: { id: string; source: string }
 }
 ```
 
-The server first records `lastSeenAt` (the "time of the last signed request") and `agentVersion`. If the `configVersion` in the request differs from the console's, it returns the current version immediately; otherwise it waits up to 25 seconds, returns `403 NODE_REVOKED` if the node is revoked during that time, and returns early when the service stops. In phase 1 the configuration version is always `0`; when the agent receives a different version it only logs it and does not apply any configuration.
+The server first records `lastSeenAt` and `agentVersion`. It answers promptly for a configuration version difference or an available installation job, and otherwise waits up to 25 seconds. Revocation returns `403 NODE_REVOKED`, and shutdown ends the wait. The VPN configuration version is currently `0`.
+
+Opted-in agents advertise up to 16 unique source IDs. IDs contain 1–32 lowercase letters, digits and hyphens and start with a letter or digit. The agent reports `busy` while installing and can retransmit its final report. The console delivers a Docker job once to the authenticated node and records the final report against the matching job ID.
 
 Long-poll requests have a separately extended server write timeout; when deployed behind a reverse proxy or CDN, the read timeout must be greater than 25 seconds (Nginx defaults to 60 seconds).
 
@@ -161,6 +193,7 @@ Long-poll requests have a separately extended server write timeout; when deploye
 - `nodes`: name, status, Ed25519 public key (unique), agent version, configuration version, and creation / enrollment / revocation / last contact times.
 - `node_enrollments`: token SHA-256 hash, node, expiry time, and time of use. Expired records (used or not) are deleted by the cleanup task that runs when the backend starts and every hour.
 - `agent_nonces`: node, nonce, and expiry time, also deleted by the cleanup task.
+- `node_docker`: the source IDs most recently advertised and the latest Docker job and result.
 - Node private keys exist only on the nodes; the console neither stores nor generates node private keys.
 - Logs record only the route template (for example `/api/nodes/:id/revoke`), method, status, and duration; they do not record node IDs, tokens, public keys, signatures, request bodies, or passwords.
 

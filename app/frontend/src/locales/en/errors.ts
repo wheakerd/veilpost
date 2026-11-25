@@ -26,6 +26,9 @@ export default {
         'This node is already enrolled or revoked, so its enrollment token can’t be reissued.',
     NODE_NOT_REVOKED:
         'Only revoked nodes can be deleted. Revoke the node first.',
+    DOCKER_SOURCE_UNAVAILABLE:
+        'The selected Docker package source is unavailable on this node.',
+    DOCKER_INSTALL_BUSY: 'This node already has a Docker installation job.',
     APP_NOT_FOUND: 'This software isn’t in the catalog.',
     APP_NOT_INSTALLED:
         'This software isn’t installed. Install it from the store first.',

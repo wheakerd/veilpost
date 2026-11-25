@@ -7,7 +7,7 @@ Go 1.27.4 + Gin 1.12.0，使用纯 Go SQLite 驱动，支持无 CGO 构建。认
 
 ## 启动与创建账号
 
-推荐在仓库根目录执行 `make start`，通过 Compose 启动前后端。首次部署在本地终端执行 `make admin-create`
+本地开发时，在仓库根目录执行 `make start`，通过 Compose 启动前后端。在本地终端执行 `make admin-create`
 ，输入账号和密码；非交互环境自动生成随机密码，账号名默认 `admin`。也可显式执行
 `make admin-create GENERATE_PASSWORD=1 USERNAME=admin`。账号为 3–64 位 ASCII 字母、数字、点、下划线或连字符，密码至少 12
 个字符、最多 256 个 UTF-8 字节。
@@ -43,7 +43,7 @@ VPN_ENV=development VPN_DATA_DIR=../../.runtime/backend-data make run
 - `auth.sqlite` 保存用户、Argon2id 密码哈希、会话哈希、待绑定信息、恢复码哈希和限流计数，以及节点（名称、状态、Ed25519
   公钥、代理程序版本、最后通信时间）、注册令牌的 SHA-256 哈希和代理程序请求随机数，以及已安装软件（`installed_apps`：目录版本、配置
   JSON、安装与修改时间）。节点私钥只保存在节点上；未安装的软件不保存任何配置。证书部分保存 DNS 服务商凭据、ACME 账户和证书（见下文）。
-- 数据库版本记录在 `PRAGMA user_version`（当前为 4：v3 软件商店，v4 证书与 DNS 服务商）；启动时在写锁事务内按顺序执行未应用的迁移，遇到更新版本的数据库拒绝启动。
+- 数据库版本记录在 `PRAGMA user_version`（当前为 5，v3 为软件商店，v4 为证书与 DNS 服务商，v5 为节点 Docker 安装）。启动时在写锁事务内按顺序执行未应用的迁移，遇到更新版本的数据库拒绝启动。
 - `master.key` 是首次初始化时随机生成的 32 字节密钥，权限为 0600。TOTP 密钥和软件的敏感配置项使用 AES-GCM 加密保存；其他包通过
   `auth` 的 `Seal` / `Unseal` 使用该密钥，附加数据绑定用途（软件配置为 `apps:<id>:<配置项>`
   ），密文不能挪到其他记录或字段。数据库存在而密钥缺失时拒绝启动，不能自动重置密钥。

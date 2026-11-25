@@ -2,11 +2,9 @@
 
 # <img src="docs/assets/veilpost-icon.svg" width="32" height="32" alt=""> **Veilpost**
 
-English | [简体中文](README.zh-CN.md)
-
----
-
 **A self-hosted console for multi-protocol VPN nodes.**
+
+English | [简体中文](README.zh-CN.md)
 
 [![CI status](https://github.com/wheakerd/veilpost/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/wheakerd/veilpost/actions/workflows/ci.yml)
 [![Releases](https://img.shields.io/badge/Releases-4b4ee6?logo=github)](https://github.com/wheakerd/veilpost/releases)
@@ -25,7 +23,9 @@ English | [简体中文](README.zh-CN.md)
 
 ## Quick start
 
-You'll need Git, Docker with the Compose plugin, GNU Make, and Python 3.11 or newer.
+Install the release packages directly on a Linux host. [Host installation](docs/releasing.md#install-on-a-linux-host)
+
+For local Compose development, you'll need Git, Docker with the Compose plugin, GNU Make, and Python 3.11 or newer.
 
 ```bash
 git clone https://github.com/wheakerd/veilpost.git
@@ -43,6 +43,8 @@ To generate a random password, run `make admin-create GENERATE_PASSWORD=1 USERNA
 ### Enroll a VPN node
 
 Open the console at an address the node can reach, using HTTPS for remote nodes. In **VPN nodes**, create an entry and run the displayed enrollment command on the node host. Enter the one-time token when prompted, then run `veilpost-agent run`. The node list shows its online status, last contact time, and agent version.
+
+For an online node that has opted in, use **Install Docker** to choose a package source and track the installation. [Prepare node package sources](app/agent/README.md#docker-engine-on-node-hosts)
 
 ### Configure VPN software
 

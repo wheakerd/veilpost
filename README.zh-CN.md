@@ -2,11 +2,9 @@
 
 # <img src="docs/assets/veilpost-icon.svg" width="32" height="32" alt=""> **Veilpost**
 
-[English](README.md) | 简体中文
-
----
-
 **自托管的多协议 VPN 节点控制台。**
+
+[English](README.md) | 简体中文
 
 [![CI 构建状态](https://github.com/wheakerd/veilpost/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/wheakerd/veilpost/actions/workflows/ci.yml)
 [![发布版本](https://img.shields.io/badge/Releases-4b4ee6?logo=github)](https://github.com/wheakerd/veilpost/releases)
@@ -25,7 +23,9 @@
 
 ## 快速开始
 
-准备 Git、Docker（含 Compose 插件）、GNU Make 和 Python 3.11 或更高版本。
+将发布包直接安装到 Linux 宿主机。[宿主机安装说明](docs/releasing.zh-CN.md#在-linux-宿主机安装)
+
+使用 Compose 进行本地开发时，准备 Git、Docker（含 Compose 插件）、GNU Make 和 Python 3.11 或更高版本。
 
 ```bash
 git clone https://github.com/wheakerd/veilpost.git
@@ -43,6 +43,8 @@ make admin-create
 ### 接入 VPN 节点
 
 从节点可访问的地址打开控制台，接入远程节点时使用 HTTPS。在 **VPN 节点** 中创建节点，再到节点主机运行界面给出的注册命令。按提示输入一次性令牌，然后运行 `veilpost-agent run`。节点列表会显示在线状态、最后通信时间和代理程序版本。
+
+在线节点启用安装后，点击 **安装 Docker**，选择软件源并跟踪安装状态。[准备节点的软件源](app/agent/README.zh-CN.md#在节点宿主机安装-docker-engine)
 
 ### 配置 VPN 软件
 

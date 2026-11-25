@@ -2,7 +2,7 @@
 
 [English](nodes-design.md) | 简体中文
 
-状态：第 1 阶段（节点注册与控制通道）已实现，其余阶段待实施。接口契约见 `app/frontend/docs/nodes-api.md`。
+当前控制通道支持节点注册、在线状态，以及在已启用安装的宿主机安装 Docker Engine。任务选择节点登记的软件源，通过签名轮询交付并回传结构化结果。[接口契约](../app/frontend/docs/nodes-api.zh-CN.md)
 
 ## 目标与范围
 

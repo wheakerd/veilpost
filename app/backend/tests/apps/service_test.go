@@ -101,7 +101,7 @@ func TestVersionTwoDatabaseMigratesToStoreSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Recreate the released version 2 layout.
-	for _, statement := range []string{"DROP TABLE certificates", "DROP TABLE acme_accounts", "DROP TABLE dns_credentials", "DROP TABLE installed_apps", "PRAGMA user_version=2"} {
+	for _, statement := range []string{"DROP TABLE node_docker", "DROP TABLE certificates", "DROP TABLE acme_accounts", "DROP TABLE dns_credentials", "DROP TABLE installed_apps", "PRAGMA user_version=2"} {
 		if _, err := service.Database().Exec(statement); err != nil {
 			t.Fatal(err)
 		}
@@ -116,7 +116,7 @@ func TestVersionTwoDatabaseMigratesToStoreSchema(t *testing.T) {
 	service.Database().QueryRow("PRAGMA user_version").Scan(&version)
 	service.Database().QueryRow("SELECT count(*) FROM users").Scan(&users)
 	service.Database().QueryRow("SELECT count(*) FROM nodes").Scan(&nodes)
-	if err := service.Database().QueryRow("SELECT count(*) FROM installed_apps").Scan(&apps); err != nil || version != 4 || users != 1 || nodes != 1 || apps != 0 {
+	if err := service.Database().QueryRow("SELECT count(*) FROM installed_apps").Scan(&apps); err != nil || version != auth.SchemaVersion() || users != 1 || nodes != 1 || apps != 0 {
 		t.Fatalf("migration: version %d, users %d, nodes %d, apps %d, error %v", version, users, nodes, apps, err)
 	}
 }

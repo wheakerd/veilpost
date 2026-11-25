@@ -2,8 +2,7 @@
 
 [English](nodes-api.md) | 简体中文
 
-对应 [节点设计](../../../docs/nodes-design.zh-CN.md) 的第 1 阶段：节点注册与控制通道。控制台只负责登记节点、签发一次性注册令牌、验证代理程序的签名请求并记录在线状态；本阶段不下发
-VPN 配置，不管理任何容器。
+控制台登记节点、签发一次性注册令牌、验证代理程序的签名请求并记录在线状态。已启用安装的代理程序还可接收 Docker Engine 安装任务。[节点设计](../../../docs/nodes-design.zh-CN.md)
 
 接口由 Go 后端（`app/backend/internal/nodes`）实现，代理程序为 `app/agent` 中的 `veilpost-agent`。两部分共用下文的签名格式，并在各自的
 Go 测试中固定同一组已知签名向量。
@@ -28,6 +27,23 @@ interface VpnNode {
     revokedAt: string | null
     lastSeenAt: string | null
     enrollmentExpiresAt: string | null
+    docker?: {
+        sources: string[]
+        job?: {
+            id: string
+            source: string
+            status:
+                | 'queued'
+                | 'running'
+                | 'succeeded'
+                | 'already_installed'
+                | 'failed'
+                | 'expired'
+                | 'unknown'
+            updatedAt: string
+            error?: 'source_unavailable' | 'install_failed' | 'timed_out'
+        }
+    }
 }
 ```
 
@@ -41,13 +57,14 @@ interface VpnNode {
 
 ### 接口
 
-| 方法与路径                       | JSON 请求体          | 成功响应                                        |
-| -------------------------------- | -------------------- | ----------------------------------------------- |
-| `GET /api/nodes`                 | —                    | `200 { nodes: VpnNode[] }`                      |
-| `POST /api/nodes`                | `{ name, password }` | `201 { node: VpnNode, enrollment: Enrollment }` |
-| `POST /api/nodes/:id/revoke`     | `{ password }`       | `200 { node: VpnNode }`                         |
-| `POST /api/nodes/:id/enrollment` | `{ password }`       | `200 { node: VpnNode, enrollment: Enrollment }` |
-| `POST /api/nodes/:id/delete`     | `{ password }`       | `204`（无响应体）                               |
+| 方法与路径                           | JSON 请求体            | 成功响应                                        |
+| ------------------------------------ | ---------------------- | ----------------------------------------------- |
+| `GET /api/nodes`                     | —                      | `200 { nodes: VpnNode[] }`                      |
+| `POST /api/nodes`                    | `{ name, password }`   | `201 { node: VpnNode, enrollment: Enrollment }` |
+| `POST /api/nodes/:id/revoke`         | `{ password }`         | `200 { node: VpnNode }`                         |
+| `POST /api/nodes/:id/enrollment`     | `{ password }`         | `200 { node: VpnNode, enrollment: Enrollment }` |
+| `POST /api/nodes/:id/delete`         | `{ password }`         | `204`（无响应体）                               |
+| `POST /api/nodes/:id/docker/install` | `{ source, password }` | `202 { node: VpnNode }`                         |
 
 ```ts
 interface Enrollment {
@@ -66,6 +83,8 @@ interface Enrollment {
 - 删除：只适用于 `revoked` 节点，需要当前密码。节点记录及其注册令牌、随机数记录一并删除，无法恢复。未吊销的节点返回
   `409 NODE_NOT_REVOKED`，节点不存在返回 `404 NODE_NOT_FOUND`。
 - 创建、吊销、重新签发和删除与账号安全操作共用“每个会话每 5 分钟 15 次”的密码确认限流，超出返回 `429 TOO_MANY_ATTEMPTS`。
+- 安装 Docker Engine 时，节点需已接入、在线，而且曾上报所选软件源。操作需要当前密码，与其他操作共用密码确认限流。软件源不可用返回 `409 DOCKER_SOURCE_UNAVAILABLE`，已有排队或正在执行的任务返回 `409 DOCKER_INSTALL_BUSY`。
+- 最近一次任务通过 `node.docker.job` 返回。排队任务在五分钟后过期，运行超过 20 分钟未收到最终结果时显示 `unknown`。`updatedAt` 是最近一次记录状态变化的时间。
 - 未知字段、多个 JSON 值或超过 8 KiB 的请求体返回 `400 REQUEST_FAILED`；缺少 `Origin`、自定义请求头或 JSON 类型返回
   `403 REQUEST_FAILED`。
 
@@ -162,15 +181,26 @@ vpn-agent-v1
 {
     agentVersion: string
     configVersion: number
+    docker?: {
+        sources: string[]
+        busy?: boolean
+        result?: {
+            id: string
+            status: 'succeeded' | 'already_installed' | 'failed'
+            error?: 'source_unavailable' | 'install_failed' | 'timed_out'
+        }
+    }
 }
 // 200 响应
 {
     configVersion: number
+    dockerInstall?: { id: string; source: string }
 }
 ```
 
-服务端先记录 `lastSeenAt`（即“最后一次签名请求时间”）和 `agentVersion`。若请求中的 `configVersion` 与控制台不同，立即返回当前版本；否则最多等待
-25 秒，期间节点被吊销则返回 `403 NODE_REVOKED`，服务停止时提前返回。第 1 阶段配置版本始终为 `0`，代理程序收到不同版本时只记录日志，不应用任何配置。
+服务端先记录 `lastSeenAt` 和 `agentVersion`。配置版本不同或有可执行的安装任务时立即响应，否则最多等待 25 秒。期间节点被吊销则返回 `403 NODE_REVOKED`，服务停止时提前返回。当前 VPN 配置版本为 `0`。
+
+已启用安装的代理程序最多上报 16 个互不重复的软件源标识。标识为 1–32 个小写字母、数字或连字符，以字母或数字开头。代理在安装期间上报 `busy`，最终结果可重复上报。控制台向认证后的节点交付一次任务，并根据任务 ID 保存匹配的最终结果。
 
 长轮询请求单独延长了服务端写超时；部署在反向代理或 CDN 之后时，读取超时需大于 25 秒（Nginx 默认 60 秒）。
 
@@ -179,6 +209,7 @@ vpn-agent-v1
 - `nodes`：名称、状态、Ed25519 公钥（唯一）、代理程序版本、配置版本、创建 / 注册 / 吊销 / 最后通信时间。
 - `node_enrollments`：令牌 SHA-256 哈希、节点、过期时间、使用时间。过期记录（无论是否使用）由后端启动时及每小时的清理任务删除。
 - `agent_nonces`：节点、随机数、过期时间，同样由清理任务删除。
+- `node_docker`：节点最近上报的软件源标识，以及最新安装任务和结果。
 - 节点私钥只在节点上；控制台不保存、不生成节点私钥。
 - 日志只记录路由模板（例如 `/api/nodes/:id/revoke`）、方法、状态和耗时，不记录节点 ID、令牌、公钥、签名、请求体或密码。
 

@@ -79,7 +79,31 @@ const nodes = {
     },
     protocols: '入口协议由软件商店中的 VPN 软件提供',
     storeLink: '前往软件商店',
-    note: '当前仅提供节点注册与在线状态；VPN 配置下发、入口协议与流量监控尚未开放。',
+    docker: {
+        open: '安装 Docker',
+        description:
+            '从节点登记的软件源安装 Docker Engine。请输入当前密码确认。',
+        source: '软件源',
+        submit: '确认安装',
+        missingSource: '请选择节点登记的软件源。',
+        queuedNotice: '已提交节点“{name}”的 Docker 安装任务。',
+        job: 'Docker · {source} · {status}',
+        states: {
+            queued: '等待节点',
+            running: '正在安装',
+            succeeded: '已安装',
+            already_installed: '节点已安装 Docker',
+            failed: '安装失败',
+            expired: '任务已过期',
+            unknown: '结果待核实',
+        },
+        errors: {
+            source_unavailable: '节点的软件源不可用。',
+            install_failed: '节点的软件包管理器未能完成安装。',
+            timed_out: '节点安装超时。',
+        },
+    },
+    note: '在已启用安装的在线节点上，可以选择软件源安装 Docker Engine。',
 }
 
 export type NodesMessages = typeof nodes

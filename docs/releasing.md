@@ -12,6 +12,14 @@ On first use, run `make admin-create`: in a terminal you enter the username and 
 
 Frontend source is mounted into the container with HMR support; after backend changes, run `make restart` to rebuild. The VPN deployment reference configuration in `docker/soft-router/` is not part of this stack.
 
+## Install on a Linux host
+
+Use the release archives that match the host architecture (`amd64` or `arm64`). Verify the downloaded archives against `SHA256SUMS` before extracting them.
+
+1. Run `veilpost-api` under a dedicated account through the host service manager. Use a persistent data directory such as `/var/lib/veilpost`. [Backend configuration](../app/backend/README.md#configuration)
+2. Serve the frontend static assets over HTTPS with a History fallback. Proxy `/api/` to the backend and configure `VPN_PUBLIC_ORIGIN` and `VPN_TRUSTED_PROXIES` for the deployment. Set the proxy read timeout above 25 seconds for agent long polls.
+3. Run `veilpost-agent` directly on each node host. Register the node's signed APT package sources when enabling Docker Engine installation. [Node agent setup](../app/agent/README.md)
+
 ## Creating an administrator in production
 
 The Linux backend release package includes `admin-create.sh`, which runs when placed in the same directory as `veilpost-api`. Use the backend service's data directory and service user:
@@ -79,13 +87,13 @@ RELEASE_DIR=.runtime/release-preview make release VERSION=v0.1.0-rc.1
 The backend package runs directly after extraction:
 
 ```bash
-sha256sum -c SHA256SUMS
+sha256sum --ignore-missing --check SHA256SUMS
 tar -xzf veilpost-v0.1.0-linux-amd64.tar.gz
 ./veilpost-api --version
-VPN_HTTP_ADDR=127.0.0.1:8080 ./veilpost-api
+VPN_HTTP_ADDR=127.0.0.1:8080 VPN_DATA_DIR=/var/lib/veilpost VPN_PUBLIC_ORIGIN=https://console.example ./veilpost-api
 ```
 
-The frontend static assets need a web server that supports History fallback. The frontend and backend packages are delivered separately; the backend provides real authentication, health checks, and the local administrator initialization command; node phase 1 (enrollment, the signed control channel, and online status) is implemented, while delivering VPN configuration to nodes is not. The GitHub Release workflow only publishes archives; it does not deploy to remote servers or start real VPN services.
+The release workflow publishes the archives for installation on Linux hosts. [Host installation](#install-on-a-linux-host)
 
 ## GitHub Actions
 
@@ -98,6 +106,9 @@ The frontend static assets need a web server that supports History fallback. The
 3. Check the workflows with a pinned version of actionlint.
 4. `make check` and `make build`.
 5. On failure, keep the browser diagnostic artifacts for 7 days.
+6. Smoke-test authentication and persistence against a disposable Compose stack.
+
+GitHub Actions discovers workflow YAML under `.github/workflows/`. On other CI platforms, install the pinned toolchains and Playwright Chromium in the runner, then run `make install`, `make check`, and `make build` from the repository root. Runners with Docker can add the disposable Compose smoke test.
 
 ### Automatic release
 

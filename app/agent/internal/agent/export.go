@@ -28,3 +28,8 @@ func EnrollMessage(token, publicKey string) []byte { return enrollMessage(token,
 
 // Backoff is the wait before the next poll after failures.
 func Backoff(failures int) time.Duration { return backoff(failures) }
+
+// SignedDockerSources validates the source profile before it is passed to APT.
+func SignedDockerSources(contents string, trustedKeyring func(string) bool) bool {
+	return signedDockerSources(contents, trustedKeyring)
+}

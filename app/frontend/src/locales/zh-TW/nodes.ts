@@ -80,5 +80,29 @@ export default {
     },
     protocols: '入口協定由軟體商店中的 VPN 軟體提供',
     storeLink: '前往軟體商店',
-    note: '目前僅提供節點註冊與上線狀態；VPN 設定派送、入口協定與流量監控尚未開放。',
+    docker: {
+        open: '安裝 Docker',
+        description:
+            '從節點登記的軟體來源安裝 Docker Engine。請輸入目前的密碼確認。',
+        source: '軟體來源',
+        submit: '確認安裝',
+        missingSource: '請選擇節點登記的軟體來源。',
+        queuedNotice: '已送出節點「{name}」的 Docker 安裝工作。',
+        job: 'Docker · {source} · {status}',
+        states: {
+            queued: '等待節點',
+            running: '正在安裝',
+            succeeded: '已安裝',
+            already_installed: '節點已安裝 Docker',
+            failed: '安裝失敗',
+            expired: '工作已逾時',
+            unknown: '結果待確認',
+        },
+        errors: {
+            source_unavailable: '節點的軟體來源無法使用。',
+            install_failed: '節點的套件管理程式未能完成安裝。',
+            timed_out: '節點安裝逾時。',
+        },
+    },
+    note: '在已啟用安裝的線上節點上，可以選擇軟體來源安裝 Docker Engine。',
 } satisfies NodesMessages

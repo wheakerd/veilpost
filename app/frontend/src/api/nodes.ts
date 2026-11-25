@@ -5,6 +5,34 @@ import { apiRequest, invalidResponse, isDate, isRecord } from './auth'
 
 export type NodeStatus = 'pending' | 'active' | 'revoked'
 
+const dockerStatuses = [
+    'queued',
+    'running',
+    'succeeded',
+    'already_installed',
+    'failed',
+    'expired',
+    'unknown',
+] as const
+const dockerErrors = [
+    'source_unavailable',
+    'install_failed',
+    'timed_out',
+] as const
+
+export interface DockerInstallation {
+    id: string
+    source: string
+    status: (typeof dockerStatuses)[number]
+    updatedAt: string
+    error?: (typeof dockerErrors)[number]
+}
+
+interface NodeDocker {
+    sources: string[]
+    job?: DockerInstallation
+}
+
 export interface VpnNode {
     id: string
     name: string
@@ -16,6 +44,7 @@ export interface VpnNode {
     revokedAt: string | null
     lastSeenAt: string | null
     enrollmentExpiresAt: string | null
+    docker?: NodeDocker
 }
 
 export interface NodeEnrollment {
@@ -24,6 +53,48 @@ export interface NodeEnrollment {
 }
 
 const statuses: readonly string[] = ['pending', 'active', 'revoked']
+const dockerSourcePattern = /^[a-z0-9][a-z0-9-]{0,31}$/
+const nodeIdPattern = /^[A-Za-z0-9_-]{22}$/
+
+function isDockerSource(value: unknown): value is string {
+    return typeof value === 'string' && dockerSourcePattern.test(value)
+}
+
+function parseDocker(value: unknown): NodeDocker | undefined {
+    if (value === undefined) return
+    if (
+        !isRecord(value) ||
+        !Array.isArray(value.sources) ||
+        value.sources.length > 16 ||
+        !value.sources.every(isDockerSource)
+    )
+        return invalidResponse()
+    if (value.job === undefined) return { sources: value.sources }
+    const job = value.job
+    if (
+        !isRecord(job) ||
+        typeof job.id !== 'string' ||
+        !nodeIdPattern.test(job.id) ||
+        !isDockerSource(job.source) ||
+        typeof job.status !== 'string' ||
+        !(dockerStatuses as readonly string[]).includes(job.status) ||
+        !isDate(job.updatedAt) ||
+        (job.error !== undefined &&
+            (typeof job.error !== 'string' ||
+                !(dockerErrors as readonly string[]).includes(job.error)))
+    )
+        return invalidResponse()
+    return {
+        sources: value.sources,
+        job: {
+            id: job.id,
+            source: job.source,
+            status: job.status as DockerInstallation['status'],
+            updatedAt: job.updatedAt,
+            error: job.error as DockerInstallation['error'],
+        },
+    }
+}
 
 function optionalDate(value: unknown): value is string | null {
     return value === null || isDate(value)
@@ -33,7 +104,7 @@ function parseNode(data: unknown): VpnNode {
     if (
         !isRecord(data) ||
         typeof data.id !== 'string' ||
-        !/^[A-Za-z0-9_-]{22}$/.test(data.id) ||
+        !nodeIdPattern.test(data.id) ||
         typeof data.name !== 'string' ||
         !data.name ||
         typeof data.status !== 'string' ||
@@ -62,6 +133,7 @@ function parseNode(data: unknown): VpnNode {
         revokedAt: data.revokedAt,
         lastSeenAt: data.lastSeenAt,
         enrollmentExpiresAt: data.enrollmentExpiresAt,
+        docker: parseDocker(data.docker),
     }
 }
 
@@ -128,6 +200,19 @@ export const nodesApi = {
         )
         if (node.id !== id || node.status !== 'revoked')
             return invalidResponse()
+        return node
+    },
+    async installDocker(id: string, source: string, password: string) {
+        const node = parseNodeResponse(
+            await apiRequest(
+                `/api/nodes/${encodeURIComponent(id)}/docker/install`,
+                {
+                    source,
+                    password,
+                },
+            ),
+        )
+        if (node.id !== id || !node.docker?.job) return invalidResponse()
         return node
     },
 }
