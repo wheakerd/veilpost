@@ -597,7 +597,7 @@ func TestVersionOneDatabaseMigratesToNodeSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Recreate the released version 1 layout: drop the node tables and version.
-	for _, statement := range []string{"DROP TABLE agent_nonces", "DROP TABLE node_enrollments", "DROP TABLE nodes", "PRAGMA user_version=1"} {
+	for _, statement := range []string{"DROP TABLE node_docker", "DROP TABLE agent_nonces", "DROP TABLE node_enrollments", "DROP TABLE nodes", "PRAGMA user_version=1"} {
 		if _, err := service.Database().Exec(statement); err != nil {
 			t.Fatal(err)
 		}

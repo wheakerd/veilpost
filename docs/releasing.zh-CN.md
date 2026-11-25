@@ -12,6 +12,14 @@
 
 前端源码挂载到容器并支持 HMR；后端修改后运行 `make restart` 重新构建。`docker/soft-router/` 中的 VPN 部署参考配置不参与此编排。
 
+## 在 Linux 宿主机安装
+
+选择与宿主机架构（`amd64` 或 `arm64`）匹配的发布包，解压前用 `SHA256SUMS` 校验已下载的归档。
+
+1. 通过宿主机的服务管理器，以专用账号运行 `veilpost-api`。数据放在 `/var/lib/veilpost` 等持久化目录。[后端配置](../app/backend/README.zh-CN.md#配置)
+2. 通过 HTTPS 提供前端静态资源并配置 History fallback。把 `/api/` 代理到后端，按部署环境设置 `VPN_PUBLIC_ORIGIN` 和 `VPN_TRUSTED_PROXIES`，代理读取超时需大于长轮询的 25 秒。
+3. 在各节点宿主机直接运行 `veilpost-agent`。启用 Docker Engine 安装时，登记该节点的签名 APT 软件源。[节点代理配置](../app/agent/README.zh-CN.md)
+
 ## 生产环境创建管理员
 
 Linux 后端发布包附带 `admin-create.sh`，与 `veilpost-api` 放在同一目录即可执行。使用后端服务的数据目录和运行用户：
@@ -79,13 +87,13 @@ RELEASE_DIR=.runtime/release-preview make release VERSION=v0.1.0-rc.1
 后端包解压后可直接运行：
 
 ```bash
-sha256sum -c SHA256SUMS
+sha256sum --ignore-missing --check SHA256SUMS
 tar -xzf veilpost-v0.1.0-linux-amd64.tar.gz
 ./veilpost-api --version
-VPN_HTTP_ADDR=127.0.0.1:8080 ./veilpost-api
+VPN_HTTP_ADDR=127.0.0.1:8080 VPN_DATA_DIR=/var/lib/veilpost VPN_PUBLIC_ORIGIN=https://console.example ./veilpost-api
 ```
 
-前端静态资源需要支持 History fallback 的 Web 服务。前后端包分别交付，后端提供真实认证、健康检查与本地管理员初始化命令；节点第 1 阶段（注册、签名控制通道与在线状态）已实现，向节点下发 VPN 配置尚未实现。GitHub Release 流程仅发布归档，不部署到远端服务器或启动真实 VPN 服务。
+发布工作流提供用于 Linux 宿主机安装的归档。[宿主机安装说明](#在-linux-宿主机安装)
 
 ## GitHub Actions
 
@@ -98,6 +106,9 @@ VPN_HTTP_ADDR=127.0.0.1:8080 ./veilpost-api
 3. 使用固定版本 actionlint 检查工作流。
 4. `make check` 和 `make build`。
 5. 失败时保留浏览器诊断产物 7 天。
+6. 使用一次性 Compose 环境检查认证和数据持久化。
+
+GitHub Actions 从 `.github/workflows/` 发现工作流 YAML。适配其他 CI 平台时，在运行器上安装仓库指定版本的工具链和 Playwright Chromium，再从仓库根目录运行 `make install`、`make check` 和 `make build`。支持 Docker 的运行器还可执行一次性 Compose 冒烟检查。
 
 ### 自动发布
 

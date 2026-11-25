@@ -79,6 +79,19 @@ func (h *Handler) RegisterConsole(group *gin.RouterGroup) {
 			c.Status(204)
 		}
 	})
+	group.POST("/:id/docker/install", func(c *gin.Context) {
+		var input struct {
+			Source   string `json:"source"`
+			Password string `json:"password"`
+		}
+		if !h.Auth.RequireWrite(c) || !decode(c, &input) {
+			return
+		}
+		node, err := h.Service.QueueDockerInstall(c.Request.Context(), h.Auth.Token(c), c.Param("id"), input.Source, input.Password)
+		if !h.failed(c, err) {
+			c.JSON(http.StatusAccepted, gin.H{"node": node})
+		}
+	})
 }
 
 func (h *Handler) RegisterAgent(group *gin.RouterGroup) {
@@ -111,8 +124,9 @@ func (h *Handler) RegisterAgent(group *gin.RouterGroup) {
 			return
 		}
 		var input struct {
-			AgentVersion  string `json:"agentVersion"`
-			ConfigVersion int64  `json:"configVersion"`
+			AgentVersion  string      `json:"agentVersion"`
+			ConfigVersion int64       `json:"configVersion"`
+			Docker        *DockerPoll `json:"docker,omitempty"`
 		}
 		// Unknown fields are ignored so newer agents can report more status.
 		if json.Unmarshal(body, &input) != nil {
@@ -121,7 +135,7 @@ func (h *Handler) RegisterAgent(group *gin.RouterGroup) {
 		}
 		// The server-wide write timeout is shorter than a long poll.
 		_ = http.NewResponseController(c.Writer).SetWriteDeadline(time.Now().Add(h.Service.hold + 15*time.Second))
-		result, err := h.Service.Poll(c.Request.Context(), nodeID, input.AgentVersion, input.ConfigVersion)
+		result, err := h.Service.poll(c.Request.Context(), nodeID, input.AgentVersion, input.ConfigVersion, input.Docker)
 		if c.Request.Context().Err() != nil {
 			c.Abort()
 			return

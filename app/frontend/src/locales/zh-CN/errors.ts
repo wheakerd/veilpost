@@ -19,6 +19,8 @@ const errors = {
     NODE_NOT_FOUND: '节点不存在，请刷新列表后重试。',
     NODE_NOT_PENDING: '节点已完成注册或已吊销，无法重新签发注册令牌。',
     NODE_NOT_REVOKED: '只能删除已吊销的节点，请先吊销。',
+    DOCKER_SOURCE_UNAVAILABLE: '该节点当前无法使用所选 Docker 软件源。',
+    DOCKER_INSTALL_BUSY: '该节点已有 Docker 安装任务。',
     APP_NOT_FOUND: '软件目录中没有这个软件。',
     APP_NOT_INSTALLED: '该软件尚未安装，请先在软件商店中安装。',
     APP_ALREADY_INSTALLED: '该软件已经安装。',

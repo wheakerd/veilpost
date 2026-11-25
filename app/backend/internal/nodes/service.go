@@ -1,6 +1,5 @@
 // Package nodes implements node registration and the signed agent control
-// channel (design phase 1). It manages no containers and sends no VPN
-// configuration yet.
+// channel, including Docker Engine installation on opted-in nodes.
 package nodes
 
 import (
@@ -38,16 +37,17 @@ const (
 // enrolled), active (enrolled) or revoked. Online is derived from the last
 // signed agent request and is always false unless the node is active.
 type Node struct {
-	ID                  string  `json:"id"`
-	Name                string  `json:"name"`
-	Status              string  `json:"status"`
-	Online              bool    `json:"online"`
-	AgentVersion        *string `json:"agentVersion"`
-	CreatedAt           string  `json:"createdAt"`
-	EnrolledAt          *string `json:"enrolledAt"`
-	RevokedAt           *string `json:"revokedAt"`
-	LastSeenAt          *string `json:"lastSeenAt"`
-	EnrollmentExpiresAt *string `json:"enrollmentExpiresAt"`
+	ID                  string      `json:"id"`
+	Name                string      `json:"name"`
+	Status              string      `json:"status"`
+	Online              bool        `json:"online"`
+	AgentVersion        *string     `json:"agentVersion"`
+	CreatedAt           string      `json:"createdAt"`
+	EnrolledAt          *string     `json:"enrolledAt"`
+	RevokedAt           *string     `json:"revokedAt"`
+	LastSeenAt          *string     `json:"lastSeenAt"`
+	EnrollmentExpiresAt *string     `json:"enrollmentExpiresAt"`
+	Docker              *DockerNode `json:"docker,omitempty"`
 }
 
 // Enrollment carries a plaintext enrollment token. It is returned exactly once.
@@ -58,7 +58,8 @@ type Enrollment struct {
 
 // PollResult is the answer to an agent long poll.
 type PollResult struct {
-	ConfigVersion int64 `json:"configVersion"`
+	ConfigVersion int64          `json:"configVersion"`
+	DockerInstall *DockerInstall `json:"dockerInstall,omitempty"`
 }
 
 type Service struct {
@@ -127,7 +128,10 @@ func validName(name string) (string, bool) {
 }
 
 const nodeColumns = `n.id,n.name,n.status,n.agent_version,n.created_at,n.enrolled_at,n.revoked_at,n.last_seen_at,
- (SELECT max(e.expires_at) FROM node_enrollments e WHERE e.node_id=n.id AND e.used_at IS NULL AND e.expires_at>?)`
+ (SELECT max(e.expires_at) FROM node_enrollments e WHERE e.node_id=n.id AND e.used_at IS NULL AND e.expires_at>?),
+ d.sources,d.job_id,d.job_source,d.job_status,d.job_at,d.job_error`
+
+const nodeTables = " FROM nodes n LEFT JOIN node_docker d ON d.node_id=n.id"
 
 type scanner interface{ Scan(...any) error }
 
@@ -136,7 +140,9 @@ func (s *Service) scanNode(row scanner) (Node, error) {
 	var version sql.NullString
 	var created int64
 	var enrolled, revoked, seen, enrollment sql.NullInt64
-	if err := row.Scan(&node.ID, &node.Name, &node.Status, &version, &created, &enrolled, &revoked, &seen, &enrollment); err != nil {
+	var docker dockerRow
+	if err := row.Scan(&node.ID, &node.Name, &node.Status, &version, &created, &enrolled, &revoked, &seen, &enrollment,
+		&docker.sources, &docker.id, &docker.source, &docker.status, &docker.updated, &docker.failure); err != nil {
 		return Node{}, err
 	}
 	if version.Valid {
@@ -150,6 +156,11 @@ func (s *Service) scanNode(row scanner) (Node, error) {
 		node.EnrollmentExpiresAt = optionalTimestamp(enrollment)
 	}
 	node.Online = node.Status == "active" && seen.Valid && s.now().UnixMilli()-seen.Int64 <= OnlineWindow.Milliseconds()
+	var err error
+	node.Docker, err = docker.view(s.now())
+	if err != nil {
+		return Node{}, err
+	}
 	return node, nil
 }
 
@@ -158,7 +169,7 @@ func (s *Service) List(ctx context.Context, session string) ([]Node, error) {
 	if _, err := s.auth.Authorize(ctx, session); err != nil {
 		return nil, err
 	}
-	rows, err := s.db.QueryContext(ctx, "SELECT "+nodeColumns+` FROM nodes n
+	rows, err := s.db.QueryContext(ctx, "SELECT "+nodeColumns+nodeTables+`
  ORDER BY CASE n.status WHEN 'revoked' THEN 1 ELSE 0 END, n.created_at DESC, n.id`, s.now().UnixMilli())
 	if err != nil {
 		return nil, err
@@ -176,7 +187,7 @@ func (s *Service) List(ctx context.Context, session string) ([]Node, error) {
 }
 
 func (s *Service) node(ctx context.Context, id string) (Node, error) {
-	return s.scanNode(s.db.QueryRowContext(ctx, "SELECT "+nodeColumns+" FROM nodes n WHERE n.id=?", s.now().UnixMilli(), id))
+	return s.scanNode(s.db.QueryRowContext(ctx, "SELECT "+nodeColumns+nodeTables+" WHERE n.id=?", s.now().UnixMilli(), id))
 }
 
 // Create adds a pending node after the current password is re-entered and
@@ -438,11 +449,12 @@ func (s *Service) Authenticate(ctx context.Context, request SignedRequest) (stri
 	return request.NodeID, nil
 }
 
-// Poll records a signed request from an active node (online status and
-// agent version) and long-polls for a configuration change. Phase 1 never
-// changes the configuration version, so a poll ends after the hold time, on
-// revocation, on shutdown or when the agent disconnects.
+// Poll records the status of an agent that does not report Docker capabilities.
 func (s *Service) Poll(ctx context.Context, nodeID, agentVersion string, configVersion int64) (PollResult, error) {
+	return s.poll(ctx, nodeID, agentVersion, configVersion, nil)
+}
+
+func (s *Service) poll(ctx context.Context, nodeID, agentVersion string, configVersion int64, docker *DockerPoll) (PollResult, error) {
 	if !versionPattern.MatchString(agentVersion) || configVersion < 0 {
 		return PollResult{}, auth.Failure("REQUEST_FAILED", 400)
 	}
@@ -457,8 +469,13 @@ func (s *Service) Poll(ctx context.Context, nodeID, agentVersion string, configV
 	if err != nil {
 		return PollResult{}, err
 	}
-	if current != configVersion {
-		return PollResult{ConfigVersion: current}, nil
+	sources, err := s.recordDockerPoll(ctx, nodeID, docker)
+	if err != nil {
+		return PollResult{}, err
+	}
+	job, err := s.claimDockerInstall(ctx, nodeID, sources)
+	if err != nil || job != nil || current != configVersion {
+		return PollResult{ConfigVersion: current, DockerInstall: job}, err
 	}
 	timer := time.NewTimer(s.hold)
 	defer timer.Stop()
@@ -476,7 +493,8 @@ func (s *Service) Poll(ctx context.Context, nodeID, agentVersion string, configV
 	if status != "active" {
 		return PollResult{}, auth.Failure("NODE_REVOKED", 403)
 	}
-	return PollResult{ConfigVersion: current}, nil
+	job, err = s.claimDockerInstall(ctx, nodeID, sources)
+	return PollResult{ConfigVersion: current, DockerInstall: job}, err
 }
 
 func (s *Service) wait(id string) <-chan struct{} {

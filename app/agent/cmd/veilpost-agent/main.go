@@ -1,5 +1,5 @@
 // Command veilpost-agent connects a node to Veilpost over a signed,
-// node-initiated control channel. Phase 1 only enrolls and reports status.
+// node-initiated control channel.
 package main
 
 import (
@@ -31,7 +31,7 @@ const (
 
 const usage = `Usage:
   veilpost-agent enroll --server https://console.example --token-stdin [--state-dir DIR]
-  veilpost-agent run [--state-dir DIR]
+  veilpost-agent run [--state-dir DIR] [--docker-sources-dir DIR]
   veilpost-agent version
 
 enroll  Generate this node's Ed25519 key and redeem a one-time enrollment
@@ -101,6 +101,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		flags := flag.NewFlagSet("run", flag.ContinueOnError)
 		flags.SetOutput(stderr)
 		stateDir := flags.String("state-dir", defaultStateDir, "directory for the private key and node configuration")
+		dockerSourcesDir := flags.String("docker-sources-dir", "", "enable Docker Engine installation using signed APT sources from this directory")
 		if flags.Parse(args[1:]) != nil || flags.NArg() > 0 {
 			fmt.Fprint(stderr, usage)
 			return exitUsage
@@ -112,7 +113,15 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		}
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
-		if err := agent.NewRunner(config, key, version, logger).Run(ctx); errors.Is(err, agent.ErrRevoked) {
+		runner := agent.NewRunner(config, key, version, logger)
+		if *dockerSourcesDir != "" {
+			runner.Docker, err = agent.NewDockerInstaller(*dockerSourcesDir)
+			if err != nil {
+				logger.Error("cannot enable Docker installation", "error", err)
+				return exitFailure
+			}
+		}
+		if err := runner.Run(ctx); errors.Is(err, agent.ErrRevoked) {
 			return exitRevoked
 		} else if err != nil {
 			logger.Error("agent stopped", "error", err)

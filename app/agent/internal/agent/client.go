@@ -1,6 +1,5 @@
-// Package agent implements the veilpost-agent control channel of design phase 1:
-// enrollment with a one-time token, Ed25519-signed requests and long
-// polling. It manages no containers and applies no VPN configuration.
+// Package agent implements enrollment, the signed agent control channel, and
+// Docker Engine installation on opted-in hosts.
 package agent
 
 import (

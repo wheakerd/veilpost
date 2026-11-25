@@ -33,7 +33,7 @@ function row(page: Page, name: string): Locator {
     return page.getByRole('row').filter({ hasText: name })
 }
 
-async function enrollAndPoll(token: string) {
+async function enrollAgent(token: string) {
     const { publicKey, privateKey } = generateKeyPairSync('ed25519')
     const encoded = publicKey.export({ format: 'jwk' }).x!
     const proofMessage = [
@@ -53,33 +53,44 @@ async function enrollAndPoll(token: string) {
     })
     expect(enrolled.status).toBe(200)
     const { nodeId } = await enrolled.json()
-    const body = JSON.stringify({ agentVersion: 'e2e-1.0', configVersion: 0 })
-    const timestamp = String(Math.floor(Date.now() / 1000))
-    const nonce = base64url(randomBytes(24))
-    const message = [
-        'vpn-agent-v1',
-        'POST',
-        '/api/agent/poll',
-        nodeId,
-        timestamp,
-        nonce,
-        createHash('sha256').update(body).digest('hex'),
-    ].join('\n')
-    // The console records the signed request at once, then holds the long poll.
-    const poll = fetch(`${origin}/api/agent/poll`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-VPN-Node': nodeId,
-            'X-VPN-Timestamp': timestamp,
-            'X-VPN-Nonce': nonce,
-            'X-VPN-Signature': base64url(
-                sign(null, Buffer.from(message), privateKey),
-            ),
-        },
-        body,
-    })
+    const poll = (fields: Record<string, unknown> = {}) => {
+        const body = JSON.stringify({
+            agentVersion: 'e2e-1.0',
+            configVersion: 0,
+            ...fields,
+        })
+        const timestamp = String(Math.floor(Date.now() / 1000))
+        const nonce = base64url(randomBytes(24))
+        const message = [
+            'vpn-agent-v1',
+            'POST',
+            '/api/agent/poll',
+            nodeId,
+            timestamp,
+            nonce,
+            createHash('sha256').update(body).digest('hex'),
+        ].join('\n')
+        return fetch(`${origin}/api/agent/poll`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-VPN-Node': nodeId,
+                'X-VPN-Timestamp': timestamp,
+                'X-VPN-Nonce': nonce,
+                'X-VPN-Signature': base64url(
+                    sign(null, Buffer.from(message), privateKey),
+                ),
+            },
+            body,
+        })
+    }
     return { nodeId: nodeId as string, poll }
+}
+
+async function enrollAndPoll(token: string) {
+    const agent = await enrollAgent(token)
+    // The console records the signed request at once, then holds the long poll.
+    return { nodeId: agent.nodeId, poll: agent.poll() }
 }
 
 async function expectNoToken(page: Page, account: Account, token: string) {
@@ -93,6 +104,51 @@ async function expectNoToken(page: Page, account: Account, token: string) {
 
 test.beforeEach(async ({ page, account }) => {
     await signIn(page, account)
+})
+
+test('Docker installation uses the selected node source and shows the signed outcome', async ({
+    page,
+    account,
+}) => {
+    const name = nodeName()
+    const created = await page.request.post(`${origin}/api/nodes`, {
+        headers,
+        data: { name, password: account.password },
+    })
+    expect(created.status()).toBe(201)
+    const { enrollment } = await created.json()
+    const agent = await enrollAgent(enrollment.token)
+    const sources = ['official', 'mirror']
+    const advertise = await agent.poll({
+        configVersion: 1,
+        docker: { sources },
+    })
+    expect(advertise.status).toBe(200)
+
+    await page.goto('/nodes')
+    const item = row(page, name)
+    await item.getByRole('button', { name: '安装 Docker' }).click()
+    await page.getByRole('combobox', { name: '软件源' }).press('ArrowDown')
+    await page.getByRole('option', { name: 'mirror' }).click()
+    await page.getByLabel('当前密码').fill(account.password)
+    await page.getByRole('button', { name: '确认安装' }).click()
+    await expect(item).toContainText('Docker · mirror · 等待节点')
+
+    const claimed = await agent.poll({ docker: { sources } })
+    expect(claimed.status).toBe(200)
+    const { dockerInstall } = await claimed.json()
+    expect(dockerInstall.source).toBe('mirror')
+    const completed = await agent.poll({
+        configVersion: 1,
+        docker: {
+            sources,
+            result: { id: dockerInstall.id, status: 'succeeded' },
+        },
+    })
+    expect(completed.status).toBe(200)
+    await page.reload()
+    await expect(item).toContainText('Docker · mirror · 已安装')
+    await noStoredSecrets(page, account)
 })
 
 test('creating a node shows a one-time enrollment token that never persists', async ({

@@ -87,5 +87,31 @@ export default {
     },
     protocols: 'Entry protocols come from the VPN software in the store',
     storeLink: 'Go to the store',
-    note: 'Only node enrollment and online status are available for now. VPN configuration delivery, entry protocols, and traffic monitoring aren’t available yet.',
+    docker: {
+        open: 'Install Docker',
+        description:
+            'Install Docker Engine from a source registered on this node. Enter your current password to confirm.',
+        source: 'Package source',
+        submit: 'Confirm installation',
+        missingSource: 'Select a source registered on this node.',
+        queuedNotice: 'Docker installation submitted for “{name}”.',
+        job: 'Docker · {source} · {status}',
+        states: {
+            queued: 'Waiting for node',
+            running: 'Installing',
+            succeeded: 'Installed',
+            already_installed: 'Already installed',
+            failed: 'Installation failed',
+            expired: 'Job expired',
+            unknown: 'Result unconfirmed',
+        },
+        errors: {
+            source_unavailable:
+                'The package source is unavailable on the node.',
+            install_failed:
+                'The node’s package manager could not complete the installation.',
+            timed_out: 'Installation timed out on the node.',
+        },
+    },
+    note: 'Choose a package source to install Docker Engine on an online node that has enabled installation.',
 } satisfies NodesMessages

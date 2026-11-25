@@ -26,6 +26,7 @@ type Runner struct {
 	Sleep func(context.Context, time.Duration) error
 	// MinInterval spaces poll starts when the console answers immediately.
 	MinInterval time.Duration
+	Docker      DockerInstaller
 }
 
 func NewRunner(config Config, key ed25519.PrivateKey, version string, logger *slog.Logger) *Runner {
@@ -55,15 +56,45 @@ func backoff(failures int) time.Duration {
 	return time.Duration(float64(delay) * (0.8 + 0.4*rand.Float64()))
 }
 
+type dockerJob struct {
+	ID     string `json:"id"`
+	Source string `json:"source"`
+}
+
+type dockerReport struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+	Error  string `json:"error,omitempty"`
+}
+
+type pollReply struct {
+	ConfigVersion *int64     `json:"configVersion"`
+	DockerInstall *dockerJob `json:"dockerInstall,omitempty"`
+}
+
 // Run polls until ctx ends (returns nil) or the node is revoked (ErrRevoked).
-// Phase 1 holds configuration version 0 and applies nothing.
 func (r *Runner) Run(ctx context.Context) error {
 	var configVersion int64
+	var report *dockerReport
+	var installing <-chan dockerReport
+	installCtx, cancelInstall := context.WithCancel(ctx)
+	defer func() {
+		cancelInstall()
+		if installing != nil {
+			<-installing
+		}
+	}()
 	failures := 0
 	r.Logger.Info("agent started", "node", r.Config.Name, "version", r.Version)
 	for ctx.Err() == nil {
+		select {
+		case finished := <-installing:
+			report = &finished
+			installing = nil
+		default:
+		}
 		started := r.Now()
-		result, err := r.poll(ctx, configVersion)
+		result, err := r.poll(ctx, configVersion, report, installing != nil)
 		if ctx.Err() != nil {
 			return nil
 		}
@@ -74,10 +105,20 @@ func (r *Runner) Run(ctx context.Context) error {
 				r.Logger.Info("console reachable again")
 			}
 			failures = 0
-			if result != configVersion {
+			report = nil
+			if result.DockerInstall != nil && r.Docker != nil && installing == nil {
+				job := *result.DockerInstall
+				done := make(chan dockerReport, 1)
+				installing = done
+				go func() {
+					status, reason := r.Docker.Install(installCtx, job.Source)
+					done <- dockerReport{ID: job.ID, Status: status, Error: reason}
+				}()
+			}
+			if *result.ConfigVersion != configVersion {
 				// Configuration delivery starts in a later phase.
-				r.Logger.Info("console reports a configuration version this agent does not apply yet", "configVersion", result)
-				configVersion = result
+				r.Logger.Info("console reports a configuration version this agent does not apply yet", "configVersion", *result.ConfigVersion)
+				configVersion = *result.ConfigVersion
 			}
 			if wait := r.MinInterval - r.Now().Sub(started); wait > 0 {
 				// A cancelled wait ends the loop through ctx.Err().
@@ -107,23 +148,36 @@ func (r *Runner) Run(ctx context.Context) error {
 	return nil
 }
 
-func (r *Runner) poll(ctx context.Context, configVersion int64) (int64, error) {
-	body, err := json.Marshal(map[string]any{"agentVersion": r.Version, "configVersion": configVersion})
+func (r *Runner) poll(ctx context.Context, configVersion int64, report *dockerReport, installing bool) (pollReply, error) {
+	type dockerStatus struct {
+		Sources []string      `json:"sources"`
+		Result  *dockerReport `json:"result,omitempty"`
+		Busy    bool          `json:"busy,omitempty"`
+	}
+	input := struct {
+		AgentVersion  string        `json:"agentVersion"`
+		ConfigVersion int64         `json:"configVersion"`
+		Docker        *dockerStatus `json:"docker,omitempty"`
+	}{AgentVersion: r.Version, ConfigVersion: configVersion}
+	if r.Docker != nil {
+		input.Docker = &dockerStatus{Sources: r.Docker.Sources(), Result: report, Busy: installing}
+	}
+	body, err := json.Marshal(input)
 	if err != nil {
-		return 0, err
+		return pollReply{}, err
 	}
 	request, err := signed(r.Config.Server, pollRoute, r.Config.NodeID, r.Key, r.Now(), body)
 	if err != nil {
-		return 0, err
+		return pollReply{}, err
 	}
-	var result struct {
-		ConfigVersion *int64 `json:"configVersion"`
-	}
+	var result pollReply
 	if err := exchange(ctx, r.Client, request, &result); err != nil {
-		return 0, err
+		return pollReply{}, err
 	}
-	if result.ConfigVersion == nil || *result.ConfigVersion < 0 {
-		return 0, &APIError{Status: 200, Code: "UNEXPECTED_RESPONSE"}
+	if result.ConfigVersion == nil || *result.ConfigVersion < 0 ||
+		result.DockerInstall != nil && (!nodeIDPattern.MatchString(result.DockerInstall.ID) ||
+			!dockerSourcePattern.MatchString(result.DockerInstall.Source)) {
+		return pollReply{}, &APIError{Status: 200, Code: "UNEXPECTED_RESPONSE"}
 	}
-	return *result.ConfigVersion, nil
+	return result, nil
 }

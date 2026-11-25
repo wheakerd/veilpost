@@ -2,7 +2,7 @@
 
 English | [简体中文](nodes-design.zh-CN.md)
 
-Status: phase 1 (node enrollment and the control channel) is implemented; the remaining phases are pending. The API contract is in `app/frontend/docs/nodes-api.md`.
+The implemented control channel covers node enrollment, online status, and Docker Engine installation on opted-in hosts. Docker jobs select a locally registered package source and carry a typed result through the signed poll. [API contract](../app/frontend/docs/nodes-api.md)
 
 ## Goals and scope
 

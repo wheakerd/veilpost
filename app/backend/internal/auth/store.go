@@ -17,7 +17,7 @@ import (
 
 // migrations[i] upgrades the schema from user_version i to i+1. Append new
 // steps; never edit a released one.
-var migrations = []string{schemaV1, schemaV2, schemaV3, schemaV4}
+var migrations = []string{schemaV1, schemaV2, schemaV3, schemaV4, schemaV5}
 
 const schemaV1 = `
 CREATE TABLE IF NOT EXISTS users (
@@ -102,6 +102,16 @@ CREATE TABLE IF NOT EXISTS certificates (
 CREATE INDEX IF NOT EXISTS certificates_renew ON certificates(renew_at) WHERE renew_at IS NOT NULL;
 CREATE INDEX IF NOT EXISTS certificates_credential ON certificates(dns_credential_id);
 CREATE INDEX IF NOT EXISTS certificates_account ON certificates(acme_account_id);
+`
+
+const schemaV5 = `
+CREATE TABLE IF NOT EXISTS node_docker (
+ node_id TEXT PRIMARY KEY REFERENCES nodes(id) ON DELETE CASCADE,
+ sources TEXT NOT NULL DEFAULT '[]',
+ job_id TEXT, job_source TEXT,
+ job_status TEXT CHECK(job_status IN ('queued','running','succeeded','already_installed','failed')),
+ job_at INTEGER, job_error TEXT
+);
 `
 
 type User struct {
