@@ -1,10 +1,27 @@
-# <img src="docs/assets/veilpost-icon.svg" width="32" height="32" alt=""> Veilpost
+<div align="center">
+
+# <img src="docs/assets/veilpost-icon.svg" width="32" height="32" alt=""> **Veilpost**
 
 [English](README.md) | 简体中文
 
+---
+
+**自托管的多协议 VPN 节点控制台。**
+
+[![CI 构建状态](https://github.com/wheakerd/veilpost/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/wheakerd/veilpost/actions/workflows/ci.yml)
+[![发布版本](https://img.shields.io/badge/Releases-4b4ee6?logo=github)](https://github.com/wheakerd/veilpost/releases)
+[![议题](https://img.shields.io/badge/Issues-41485b?logo=github)](https://github.com/wheakerd/veilpost/issues)
+[![拉取请求](https://img.shields.io/badge/Pull%20requests-41485b?logo=github)](https://github.com/wheakerd/veilpost/pulls)
+
+[快速开始](#快速开始) ·
+[使用控制台](#使用控制台) ·
+[运行与维护开发环境](#运行与维护开发环境) ·
+[开发与打包](#开发与打包) ·
+[文档索引](#文档索引)
+
 ![Veilpost 宣传卡片，右侧为线框地球](docs/assets/veilpost-card.zh-CN.png)
 
-Veilpost 是自托管的多协议 VPN 节点控制台，可用于接入节点、查看在线状态、保存 VPN 软件设置和管理 TLS 证书。
+</div>
 
 ## 快速开始
 

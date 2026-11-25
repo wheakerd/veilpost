@@ -1,10 +1,27 @@
-# <img src="docs/assets/veilpost-icon.svg" width="32" height="32" alt=""> Veilpost
+<div align="center">
+
+# <img src="docs/assets/veilpost-icon.svg" width="32" height="32" alt=""> **Veilpost**
 
 English | [简体中文](README.zh-CN.md)
 
+---
+
+**A self-hosted console for multi-protocol VPN nodes.**
+
+[![CI status](https://github.com/wheakerd/veilpost/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/wheakerd/veilpost/actions/workflows/ci.yml)
+[![Releases](https://img.shields.io/badge/Releases-4b4ee6?logo=github)](https://github.com/wheakerd/veilpost/releases)
+[![Issues](https://img.shields.io/badge/Issues-41485b?logo=github)](https://github.com/wheakerd/veilpost/issues)
+[![Pull requests](https://img.shields.io/badge/Pull%20requests-41485b?logo=github)](https://github.com/wheakerd/veilpost/pulls)
+
+[Quick start](#quick-start) ·
+[Console workflows](#console-workflows) ·
+[Development stack](#run-and-maintain-the-development-stack) ·
+[Develop and package](#develop-and-package) ·
+[Documentation](#documentation)
+
 ![Veilpost promotional card with a wireframe globe](docs/assets/veilpost-card.png)
 
-Veilpost is a self-hosted console for multi-protocol VPN nodes. Use it to enroll nodes, view their online status, save VPN software settings, and manage TLS certificates.
+</div>
 
 ## Quick start
 
