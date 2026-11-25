@@ -459,6 +459,7 @@ onBeforeUnmount(() => {
                         <ElSelect
                             id="certificate-credential"
                             v-model="form.credentialId"
+                            fit-input-width
                             :placeholder="
                                 t(
                                     'certs.certificates.form.credentialPlaceholder',
