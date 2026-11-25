@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref } from 'vue'
+import { nextTick, onBeforeUnmount, ref, useId } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Key from '~icons/lucide/key-round'
 import PasswordField from '@/components/PasswordField.vue'
@@ -12,6 +12,8 @@ import DiscardPrompt from '@/components/DiscardPrompt.vue'
 import { useDiscardGuard } from '@/composables/useDiscardGuard'
 
 const emit = defineEmits<{ changed: [] }>()
+const id = useId()
+const currentPasswordId = `${id}-current-password`
 const { t } = useI18n()
 const auth = useAuthStore()
 const redirectIfExpired = useSessionExpiry()
@@ -22,6 +24,7 @@ const confirmation = ref('')
 const busy = ref(false)
 const error = ref('')
 const notice = ref('')
+defineExpose({ busy })
 
 function clearFields() {
     current.value = ''
@@ -55,7 +58,7 @@ async function open() {
     notice.value = ''
     editing.value = true
     await nextTick()
-    document.getElementById('current-password')?.focus()
+    document.getElementById(currentPasswordId)?.focus()
 }
 
 onBeforeUnmount(clearFields)
@@ -86,7 +89,7 @@ async function submit() {
     }
     if (error.value) {
         await nextTick()
-        document.getElementById('current-password')?.focus()
+        document.getElementById(currentPasswordId)?.focus()
     }
 }
 </script>
@@ -94,13 +97,13 @@ async function submit() {
 <template>
     <section
         class="plain-panel security-panel"
-        aria-labelledby="password-title"
+        :aria-labelledby="`${id}-password-title`"
     >
         <div class="setting-heading">
             <div class="security-heading">
                 <span class="security-icon"><Key aria-hidden="true" /></span>
                 <div>
-                    <h2 id="password-title">
+                    <h2 :id="`${id}-password-title`">
                         {{ t('security.password.title') }}
                     </h2>
                     <p>{{ t('security.password.description') }}</p>
@@ -115,24 +118,24 @@ async function submit() {
                 v-if="editing"
                 class="security-form auth-form"
                 :aria-busy="busy"
-                @keydown.esc="passwordRequest"
+                @keydown.esc.stop="passwordRequest"
                 @submit.prevent="submit"
             >
                 <PasswordField
-                    id="current-password"
+                    :id="currentPasswordId"
                     v-model="current"
                     :label="t('common.password.current')"
                     :disabled="busy"
                 />
                 <PasswordField
-                    id="new-password"
+                    :id="`${id}-new-password`"
                     v-model="next"
                     :label="t('security.password.next')"
                     autocomplete="new-password"
                     :disabled="busy"
                 />
                 <PasswordField
-                    id="confirm-password"
+                    :id="`${id}-confirm-password`"
                     v-model="confirmation"
                     :label="t('security.password.confirm')"
                     autocomplete="new-password"

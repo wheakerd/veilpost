@@ -27,20 +27,21 @@ test.describe('signed in', () => {
         const main = page.getByRole('navigation', { name: '主导航' })
         const tabs = page.getByRole('navigation', { name: '已打开的页面' })
         await main.getByRole('link', { name: 'VPN 节点', exact: true }).click()
-        await main.getByRole('link', { name: '偏好设置', exact: true }).click()
+        await main.getByRole('link', { name: '证书', exact: true }).click()
         await expect(tabs.getByRole('link')).toHaveText([
             '网络概览',
             'VPN 节点',
-            '偏好设置',
+            '证书',
         ])
-        await expect(
-            tabs.getByRole('link', { name: '偏好设置' }),
-        ).toHaveAttribute('aria-current', 'page')
+        await expect(tabs.getByRole('link', { name: '证书' })).toHaveAttribute(
+            'aria-current',
+            'page',
+        )
         // The overview stays and cannot be closed.
         await expect(
             tabs.getByRole('button', { name: '关闭“网络概览”' }),
         ).toHaveCount(0)
-        await tabs.getByRole('button', { name: '关闭“偏好设置”' }).click()
+        await tabs.getByRole('button', { name: '关闭“证书”' }).click()
         await expect(page).toHaveURL(/\/nodes$/)
         await expect(tabs.getByRole('link')).toHaveText([
             '网络概览',
@@ -62,13 +63,19 @@ test.describe('signed in', () => {
             'narrow screens use the bottom bar',
         )
         await page.goto('/nodes')
+        const main = page.getByRole('navigation', { name: '主导航' })
+        const preferencesLink = main.getByRole('link', {
+            name: '偏好设置',
+            exact: true,
+        })
+        await expect(preferencesLink).toHaveCount(0)
+        await expect(main.getByText('设置', { exact: true })).toHaveCount(0)
         expect(await preferences(page)).not.toContain('sidebarCollapsed')
         await page.getByRole('button', { name: '收起侧栏' }).click()
+        await expect(preferencesLink).toHaveCount(0)
         const expand = page.getByRole('button', { name: '展开侧栏' })
         await expect(expand).toHaveAttribute('aria-expanded', 'false')
-        const link = page
-            .getByRole('navigation', { name: '主导航' })
-            .getByRole('link', { name: 'VPN 节点', exact: true })
+        const link = main.getByRole('link', { name: 'VPN 节点', exact: true })
         // The icon rail keeps the name for assistive tech and shows a tooltip.
         await expect(link).toHaveAccessibleName('VPN 节点')
         await link.hover()
@@ -95,14 +102,13 @@ test.describe('signed in', () => {
         await page.goto('/settings/appearance')
         const html = page.locator('html')
         const mode = page.getByRole('button', { name: /^界面外观：/ })
-        await expect(mode).toHaveAccessibleName('界面外观：跟随系统')
-        await mode.click()
-        await expect(html).not.toHaveClass(/dark/)
+        await expect(mode).toHaveAccessibleName('界面外观：浅色')
         await expect(
-            page.getByRole('button', { name: '界面外观：浅色' }),
-        ).toBeVisible()
-        await page.getByRole('button', { name: '界面外观：浅色' }).click()
+            page.getByRole('radio', { name: '跟随系统' }),
+        ).toBeChecked()
+        await mode.click()
         await expect(html).toHaveClass(/dark/)
+        await expect(mode).toHaveAccessibleName('界面外观：深色')
 
         // Narrow screens drop the reload button to fit the bar.
         if (testInfo.project.name !== 'mobile')
@@ -133,10 +139,34 @@ test.describe('signed in', () => {
         await trigger.click()
         const centre = page.getByRole('dialog', { name: '个人中心' })
         await expect(centre).toBeVisible()
-        await expect(centre).toContainText(account.username)
+        await expect(
+            centre.getByRole('heading', { name: '资料' }),
+        ).toBeVisible()
+        await expect(centre.locator('.account-profile')).toContainText(
+            account.username,
+        )
         await expect(centre).toContainText('未启用两步验证')
-        await centre.getByRole('link', { name: '账号安全' }).click()
-        await expect(page).toHaveURL(/\/settings\/security$/)
+        await centre.getByRole('button', { name: '登录与安全' }).click()
+        await expect(
+            centre.getByRole('button', { name: '启用两步验证' }),
+        ).toBeVisible()
+        await expect(page).toHaveURL('http://127.0.0.1:4173/')
+        await centre.getByRole('button', { name: '登录会话' }).click()
+        await expect(
+            centre.getByText('只有当前浏览器处于登录状态'),
+        ).toBeVisible()
+        await expect(
+            centre.getByRole('button', { name: '启用两步验证' }),
+        ).toHaveCount(0)
+        await page.keyboard.press('Escape')
+        await expect(centre).toBeHidden()
+        await expect(trigger).toBeFocused()
+        await trigger.click()
+        await expect(
+            centre.getByRole('heading', { name: '资料' }),
+        ).toBeVisible()
+        await centre.getByRole('button', { name: '偏好设置' }).click()
+        await expect(page).toHaveURL(/\/settings\/appearance$/)
         await expect(centre).toBeHidden()
         await trigger.click()
         await centre.getByRole('button', { name: '退出登录' }).click()
@@ -167,7 +197,7 @@ test.describe('signed in', () => {
 test('sign-in offers language and appearance switches over the globe', async ({
     page,
 }) => {
-    await page.emulateMedia({ colorScheme: 'light' })
+    await page.emulateMedia({ colorScheme: 'dark' })
     await page.goto('/login')
     await expect(page.locator('canvas.lab-globe')).toHaveAttribute(
         'aria-hidden',
@@ -182,9 +212,15 @@ test('sign-in offers language and appearance switches over the globe', async ({
         page.getByRole('heading', { name: 'Sign in to the console' }),
     ).toBeVisible()
     await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-    await page.getByRole('button', { name: /^Appearance: / }).click()
-    await expect(page.locator('html')).not.toHaveClass(/dark/)
-    await page.getByRole('button', { name: 'Appearance: Light' }).click()
-    await expect(page.locator('html')).toHaveClass(/dark/)
+    const html = page.locator('html')
+    const mode = page.getByRole('button', { name: /^Appearance: / })
+    await expect(mode).toHaveAccessibleName('Appearance: Dark')
+    await expect(html).toHaveClass(/dark/)
+    await mode.click()
+    await expect(mode).toHaveAccessibleName('Appearance: Light')
+    await expect(html).not.toHaveClass(/dark/)
+    await mode.click()
+    await expect(mode).toHaveAccessibleName('Appearance: Dark')
+    await expect(html).toHaveClass(/dark/)
     await expect(page.locator('kbd')).toHaveText('Enter')
 })

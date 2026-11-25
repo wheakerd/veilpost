@@ -28,6 +28,8 @@ export default {
         account: {
             title: '個人中心',
             open: '開啟個人中心',
+            profile: '資料',
+            loginSecurity: '登入與安全',
             twoFactorOn: '已啟用兩步驟驗證',
             twoFactorOff: '未啟用兩步驟驗證',
         },
@@ -47,7 +49,7 @@ export default {
         expand: '展開側欄',
         refresh: '重新整理此頁',
         mode: '介面外觀：{mode}',
-        modes: { light: '淺色', dark: '深色', system: '跟隨系統' },
+        modes: { light: '淺色', dark: '深色' },
         language: '介面語言',
         followBrowser: '跟隨瀏覽器',
         preferences: '偏好設定',

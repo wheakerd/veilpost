@@ -50,8 +50,9 @@ import { useInterfaceMotion } from '@/composables/useInterfaceMotion'
 import { useSheetDrag } from '@/composables/useSheetDrag'
 import { useTabLens } from '@/composables/useTabLens'
 import { vGlass } from '@/theme/liquidGlass'
-import { useModeCycle } from '@/composables/useModeCycle'
+import { useModeToggle } from '@/composables/useModeToggle'
 import { authActivity } from '@/api/activity'
+import AccountAvatar from '@/components/AccountAvatar.vue'
 import AccountCenter from '@/components/AccountCenter.vue'
 import LoadingState from '@/components/LoadingState.vue'
 import PreferencesPanel from '@/components/PreferencesPanel.vue'
@@ -90,6 +91,7 @@ interface NavItem {
     // Narrow screens keep four items in the bottom bar; the rest move to the
     // row below the brand.
     desktopOnly?: boolean
+    mobileOnly?: boolean
 }
 const navigation: NavItem[] = [
     { to: '/', title: 'overview', icon: Overview, group: 'workspace' },
@@ -126,13 +128,22 @@ const navigation: NavItem[] = [
         title: 'appearance',
         icon: Palette,
         group: 'settings',
+        mobileOnly: true,
     },
 ]
 const groups: Group[] = ['workspace', 'software', 'security', 'settings']
-const navGroups = groups.map((group) => ({
-    group,
-    items: navigation.filter((item) => item.group === group),
-}))
+function groupNavigation(items: NavItem[]) {
+    return groups
+        .map((group) => ({
+            group,
+            items: items.filter((item) => item.group === group),
+        }))
+        .filter((entry) => entry.items.length > 0)
+}
+const navGroups = groupNavigation(navigation)
+const sidebarNavigation = navigation.filter((item) => !item.mobileOnly)
+const sidebarGroups = groupNavigation(sidebarNavigation)
+const sidebarGroupKeys = sidebarGroups.map((entry) => entry.group)
 
 // Narrow screens use the bottom bar, where groups do not fold.
 const narrowQuery = window.matchMedia('(max-width: 47.5rem)')
@@ -144,9 +155,9 @@ narrowQuery.addEventListener('change', onNarrowChange)
 
 // Open sidebar groups, in memory only. With navMultiple off, opening one
 // group folds the others. The current page's group always opens.
-const openGroups = ref(new Set<Group>(groups))
+const openGroups = ref(new Set<Group>(sidebarGroupKeys))
 function groupOf(path: string) {
-    return navigation.find((item) => item.to === path)?.group
+    return sidebarNavigation.find((item) => item.to === path)?.group
 }
 function openGroup(group: Group) {
     openGroups.value = preferences.navMultiple
@@ -169,7 +180,7 @@ const menu = ref<{
     close: (index: string) => void
 }>()
 function onMenuOpen(index: string) {
-    if (groups.includes(index as Group)) openGroup(index as Group)
+    if (sidebarGroupKeys.includes(index as Group)) openGroup(index as Group)
 }
 function onMenuClose(index: string) {
     if (!openGroups.value.has(index as Group)) return
@@ -178,7 +189,7 @@ function onMenuClose(index: string) {
     openGroups.value = next
 }
 watch(openGroups, (open) => {
-    for (const group of groups)
+    for (const group of sidebarGroupKeys)
         if (open.has(group)) menu.value?.open(group)
         else menu.value?.close(group)
 })
@@ -388,7 +399,7 @@ function toggleSidebar() {
     preferences.sidebarCollapsed = collapsed.value ? undefined : true
 }
 
-const mode = useModeCycle()
+const mode = useModeToggle()
 
 function chooseLocale(value: string) {
     preferences.locale = isLocale(value) ? value : undefined
@@ -540,7 +551,7 @@ onBeforeUnmount(() => {
                                     type="button"
                                     class="icon-button"
                                     :aria-label="mode.label.value"
-                                    @click="mode.cycle"
+                                    @click="mode.toggle"
                                 >
                                     <component
                                         :is="mode.icon.value"
@@ -607,9 +618,7 @@ onBeforeUnmount(() => {
                             :aria-label="t('common.shell.account.open')"
                             @click="accountOpen = true"
                         >
-                            <span class="account-avatar" aria-hidden="true">{{
-                                auth.user.username.slice(0, 1).toUpperCase()
-                            }}</span>
+                            <AccountAvatar :username="auth.user.username" />
                             <span class="account-name">{{
                                 auth.user.username
                             }}</span>
@@ -635,7 +644,7 @@ onBeforeUnmount(() => {
                         >
                             <template v-if="!collapsed">
                                 <ElSubMenu
-                                    v-for="entry in navGroups"
+                                    v-for="entry in sidebarGroups"
                                     :key="entry.group"
                                     :index="entry.group"
                                 >
@@ -664,7 +673,7 @@ onBeforeUnmount(() => {
                             </template>
                             <template v-else>
                                 <ElTooltip
-                                    v-for="item in navigation"
+                                    v-for="item in sidebarNavigation"
                                     :key="item.to"
                                     :content="t(`common.routes.${item.title}`)"
                                     placement="right"

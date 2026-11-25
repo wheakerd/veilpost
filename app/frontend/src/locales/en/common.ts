@@ -28,6 +28,8 @@ export default {
         account: {
             title: 'Account center',
             open: 'Open the account center',
+            profile: 'Profile',
+            loginSecurity: 'Sign-in and security',
             twoFactorOn: 'Two-step verification is on',
             twoFactorOff: 'Two-step verification is off',
         },
@@ -47,7 +49,7 @@ export default {
         expand: 'Expand sidebar',
         refresh: 'Reload this page',
         mode: 'Appearance: {mode}',
-        modes: { light: 'Light', dark: 'Dark', system: 'System' },
+        modes: { light: 'Light', dark: 'Dark' },
         language: 'Interface language',
         followBrowser: 'Follow browser',
         preferences: 'Preferences',

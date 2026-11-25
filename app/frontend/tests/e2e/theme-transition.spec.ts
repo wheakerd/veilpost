@@ -98,9 +98,6 @@ test('dark spreads out of the pressed point and light gathers back into it', asy
     await page.goto('/')
     const html = page.locator('html')
     const mode = modeButton(page)
-    // System (light) to light: the colours stay, so nothing animates.
-    await expect(mode).toHaveAccessibleName('界面外观：跟随系统')
-    await mode.click()
     await expect(mode).toHaveAccessibleName('界面外观：浅色')
     await expect(html).not.toHaveClass(/dark/)
 
@@ -111,8 +108,9 @@ test('dark spreads out of the pressed point and light gathers back into it', asy
     const pressY = box!.y + box!.height / 2
     const viewport = page.viewportSize()!
 
-    // Light to dark: the new view grows from the button to the far corner.
+    // The first click switches from system light to dark and expands the circle.
     await mode.click()
+    await expect(mode).toHaveAccessibleName('界面外观：深色')
     await expect(html).toHaveClass(/dark/)
     await expect
         .poll(async () => circles(await recorder.list()))
@@ -133,9 +131,9 @@ test('dark spreads out of the pressed point and light gathers back into it', asy
     expect(to.radius).toBeGreaterThanOrEqual(farthest - 2)
     await expect.poll(recorder.settled).toBe(true)
 
-    // Dark to system (light): the old dark view shrinks into the button.
+    // Dark to light: the old dark view shrinks into the button.
     await mode.click()
-    await expect(mode).toHaveAccessibleName('界面外观：跟随系统')
+    await expect(mode).toHaveAccessibleName('界面外观：浅色')
     await expect(html).not.toHaveClass(/dark/)
     await expect
         .poll(async () => circles(await recorder.list()))
@@ -172,14 +170,13 @@ test('a switch during a running one settles on the latest mode without errors', 
     await page.goto('/')
     const html = page.locator('html')
     const mode = modeButton(page)
-    await expect(mode).toHaveAccessibleName('界面外观：跟随系统')
+    await expect(mode).toHaveAccessibleName('界面外观：浅色')
     const recorder = await recordSwitchAnimations(page)
-    // Keyboard presses do not wait for the circle: system, light, dark and
-    // back to system (light) while the dark circle is still running.
+    // Switch to dark, then back to light without waiting for the circle.
     await mode.focus()
-    for (let press = 0; press < 3; press += 1)
-        await page.keyboard.press('Enter')
-    await expect(mode).toHaveAccessibleName('界面外观：跟随系统')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Enter')
+    await expect(mode).toHaveAccessibleName('界面外观：浅色')
     await expect(html).not.toHaveClass(/dark/)
     await expect.poll(recorder.settled).toBe(true)
     await expect(html).not.toHaveClass(/dark/)
@@ -206,7 +203,6 @@ test('the system reduced-motion setting switches instantly without a circle', as
     const html = page.locator('html')
     const mode = modeButton(page)
     const recorder = await recordSwitchAnimations(page)
-    await mode.click()
     await expect(mode).toHaveAccessibleName('界面外观：浅色')
     await mode.click()
     // The class changes in the same task as the click; no transition defers it.

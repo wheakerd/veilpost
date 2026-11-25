@@ -1,9 +1,16 @@
 import { computed, ref, watchEffect } from 'vue'
 import type { usePreferencesStore } from '@/stores/preferences'
+import type { ColorMode } from './palettes'
 
+const systemDark = ref(false)
 const systemReducedMotion = ref(false)
 export const useSystemReducedMotion = () =>
     computed(() => systemReducedMotion.value)
+
+export function resolveColorMode(mode: ColorMode): 'light' | 'dark' {
+    if (mode !== 'system') return mode
+    return systemDark.value ? 'dark' : 'light'
+}
 
 // The light/dark switch: going dark, the dark view spreads out of a circle at
 // the point the user pressed; going light, it gathers back into that point
@@ -116,7 +123,7 @@ export function installTheme(
 ) {
     const dark = window.matchMedia('(prefers-color-scheme: dark)')
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const systemDark = ref(dark.matches)
+    systemDark.value = dark.matches
     systemReducedMotion.value = reducedMotion.matches
     const onDarkChange = (event: MediaQueryListEvent) => {
         systemDark.value = event.matches
@@ -142,9 +149,7 @@ export function installTheme(
     }
     const stop = watchEffect(() => {
         const root = document.documentElement
-        const isDark =
-            preferences.mode === 'dark' ||
-            (preferences.mode === 'system' && systemDark.value)
+        const isDark = resolveColorMode(preferences.mode) === 'dark'
         const reduce = preferences.reducedMotion || systemReducedMotion.value
         root.dataset.theme = preferences.palette
         wantDark = isDark

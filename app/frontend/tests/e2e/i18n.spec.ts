@@ -140,7 +140,11 @@ for (const language of languages) {
             )
             await page.goto('/settings/security')
             await page.locator('.security-summary .el-button').click()
-            await expect(page.locator('#setup-password')).toBeVisible()
+            await expect(
+                page.locator(
+                    '.security-form input[autocomplete="current-password"]',
+                ),
+            ).toBeVisible()
             await expectNoHorizontalOverflow(
                 page,
                 `${language.lang} enable 2FA`,

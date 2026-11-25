@@ -93,16 +93,8 @@
 .app-manage-link {
     display: inline-flex;
     align-items: center;
-    min-height: 2rem;
-    padding: 0.25rem 0.75rem;
-    border: 1px solid var(--app-border-strong);
-    border-radius: var(--app-radius-control);
-    color: var(--app-text);
     font-size: 0.8125rem;
     font-weight: 500;
-    &:hover {
-        background: var(--app-raised);
-    }
 }
 
 .app-panel + .app-panel {

@@ -28,19 +28,19 @@ test('navigation stays reachable while scrolling and rapid changes settle on the
     const errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
     await page.goto('/')
-    for (const name of ['VPN 节点', '账号安全', '网络概览', '偏好设置']) {
+    for (const name of ['VPN 节点', '账号安全', '网络概览', '账号安全']) {
         await page
             .getByRole('navigation', { name: '主导航' })
             .getByRole('link', { name, exact: true })
             .click()
     }
     await expect(
-        page.getByRole('heading', { name: '偏好设置', exact: true }),
+        page.getByRole('heading', { name: '账号安全', exact: true }),
     ).toBeVisible()
     const selected = page
         .getByRole('navigation', { name: '主导航' })
         .getByRole('link', {
-            name: '偏好设置',
+            name: '账号安全',
             exact: true,
         })
     await expect(selected).toHaveAttribute('aria-current', 'page')
@@ -61,6 +61,10 @@ test('navigation stays reachable while scrolling and rapid changes settle on the
                 : 100
         })
         .toBeLessThan(2)
+    await page.goto('/settings/appearance')
+    await expect(
+        page.getByRole('heading', { name: '偏好设置', exact: true }),
+    ).toBeVisible()
     await scrollPage(page, 100_000)
     const navigation = page.getByRole('navigation', { name: '主导航' })
     for (const link of await navigation.getByRole('link').all()) {
@@ -220,7 +224,7 @@ test('the top bar lifts only while content passes beneath it', async ({
 test('transparency and contrast preferences provide solid readable navigation', async ({
     page,
 }, testInfo) => {
-    await page.goto('/settings/appearance')
+    await page.goto('/nodes')
     const session = await page.context().newCDPSession(page)
     await session.send('Emulation.setEmulatedMedia', {
         features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }],
@@ -241,6 +245,7 @@ test('transparency and contrast preferences provide solid readable navigation', 
                 : '.sidebar-menu .el-menu-item.is-active',
         ),
     ).toHaveCSS('outline-style', 'solid')
+    await page.goto('/settings/appearance')
     await page
         .getByRole('radiogroup', { name: '界面外观' })
         .getByText('深色', { exact: true })

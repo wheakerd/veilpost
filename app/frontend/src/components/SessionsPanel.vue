@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, useId } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Monitor from '~icons/lucide/monitor'
 import AuthFeedback from '@/components/AuthFeedback.vue'
@@ -9,9 +9,17 @@ import { formatNumber } from '@/i18n/format'
 import DisabledReason from '@/components/DisabledReason.vue'
 
 // otherSessions is null until the status loads; unavailable marks a failed load.
-defineProps<{ otherSessions: number | null; unavailable?: boolean }>()
+withDefaults(
+    defineProps<{
+        otherSessions: number | null
+        unavailable?: boolean
+        showHeading?: boolean
+    }>(),
+    { showHeading: true },
+)
 const emit = defineEmits<{ revoked: [] }>()
 const { t } = useI18n()
+const titleId = useId()
 const redirectIfExpired = useSessionExpiry()
 const busy = ref(false)
 const error = ref('')
@@ -36,17 +44,17 @@ async function revoke() {
 </script>
 
 <template>
-    <section
-        class="plain-panel security-panel"
-        aria-labelledby="sessions-title"
-    >
+    <section class="plain-panel security-panel" :aria-labelledby="titleId">
         <div class="setting-heading">
             <div class="security-heading">
                 <span class="security-icon"
                     ><Monitor aria-hidden="true"
                 /></span>
                 <div>
-                    <h2 id="sessions-title">
+                    <h2
+                        :id="titleId"
+                        :class="{ 'visually-hidden': !showHeading }"
+                    >
                         {{ t('security.sessions.title') }}
                     </h2>
                     <p>

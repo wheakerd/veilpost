@@ -9,6 +9,7 @@ This is currently implemented with Go + Gin + SQLite, and the endpoints below ar
 - `/login`: username and password sign-in; when no administrator exists, it shows the local initialization command.
 - `/login/verify`: verification with an authenticator code or a recovery code; the user can go back to username sign-in.
 - `/settings/security`: authenticator binding, saving recovery codes, regenerating recovery codes, turning off two-step verification, changing the password, and signing out other sessions.
+- Open the account center from the top bar to view your username, manage sign-in security and sessions, or sign out.
 - All other console routes require a full session; while two-step verification is incomplete, they always return to the verification page.
 - Navigation reads the session from the server; if a signed-in session was confirmed within the last 15 seconds, that read is skipped to avoid repeated requests when switching pages quickly. After a refresh, state is always restored from the server. Access is not granted when the authentication service is unavailable, returns HTML, or returns JSON that does not match the contract.
 - The post-login return address may only be a known console page, and keeps its query parameters and fragment. External addresses and redirect loops back to the sign-in page fall back to `/`.
