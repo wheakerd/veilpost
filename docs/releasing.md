@@ -54,7 +54,7 @@ make release VERSION=v0.1.0
 
 Native checks need the pinned versions of Go, Node, and Bun, plus GNU Make, Python 3.11+, and a C compiler. Browser tests use four workers by default, on port 4173 and a random backend port; they verify against the real Go/SQLite service without API mocks. Temporary test accounts, databases, and keys are destroyed after the tests finish. To install the browser for the first time, run `bunx playwright install chromium` in app/frontend. `make build` writes the frontend output to `dist/frontend/` in the repository root and produces `app/backend/bin/veilpost-api` and `app/agent/bin/veilpost-agent`.
 
-`make native-start` / `native-stop` / `native-restart` / `native-status` provide a native development mode. Its database is independent of the Compose one; stop one mode before switching to the other so they do not both claim the same frontend port.
+On Linux with `flock`, use `make native-start`, `make native-stop`, `make native-restart`, `make native-status`, and `make native-logs` to manage the native stack. The Go backend controller calls the TypeScript frontend launcher under the same development lock. Use `make -C app/backend dev-start` and the corresponding `dev-stop`, `dev-restart`, `dev-status`, or `dev-logs` targets to manage just the backend. Native development uses a separate database from Compose. Stop the current stack before switching modes to free the frontend port.
 
 ## Release artifacts
 

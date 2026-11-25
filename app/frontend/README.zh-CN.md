@@ -24,6 +24,8 @@ bun run dev --backend-host 127.0.0.1 --backend-port 49152
 
 原生 `bun run dev` 默认打开系统浏览器，`--no-open` 或 `OPEN_BROWSER=false` 可关闭；CI 和生产预览不自动打开浏览器。根目录 `make native-start` 可以自动启动原生后端、发现随机端口并传给前端；不要与 Compose 同时占用前端 3000 端口。
 
+在装有 `flock` 的 Linux 上，`bun run dev:start` 在后台启动前端。使用 `bun run dev:status` 查看状态、`bun run dev:logs` 查看日志、`bun run dev:restart` 重启或 `bun run dev:stop` 停止。这些 TypeScript 命令与 `make native-*` 共用前端进程记录和日志，并在原生后端就绪时自动使用其地址。
+
 ```bash
 bun run typecheck
 bun run build
@@ -86,7 +88,7 @@ src/views/        登录、验证、账号安全、概览、节点、软件商�
 src/i18n/         vue-i18n 实例、浏览器语言匹配与 Intl 格式化
 src/locales/      按语言与功能拆分的语言包
 config/           开发代理及浏览器开关
-scripts/          Rsbuild 命令行入口
+scripts/          Rsbuild 启动器和后台开发命令
 tests/e2e/        真实后端浏览器测试
 tests/dev/        开发参数与语言包验证
 ```

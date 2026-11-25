@@ -24,6 +24,8 @@ The backend host and port must be given together; an IP address or a service hos
 
 Native `bun run dev` opens the system browser by default; `--no-open` or `OPEN_BROWSER=false` turns this off. CI and the production preview do not open a browser automatically. `make native-start` in the repository root can start the native backend, discover its random port, and pass it to the frontend; do not let it and Compose occupy frontend port 3000 at the same time.
 
+On Linux with `flock` installed, `bun run dev:start` starts the frontend in the background. Use `bun run dev:status`, `bun run dev:logs`, `bun run dev:restart`, and `bun run dev:stop` to manage it. These TypeScript commands share the frontend process record and log with `make native-*` and automatically use the native backend address when it is ready.
+
 ```bash
 bun run typecheck
 bun run build
@@ -86,7 +88,7 @@ src/views/        Sign-in, verification, account security, overview, nodes, stor
 src/i18n/         vue-i18n instance, browser language matching, and Intl formatting
 src/locales/      Language packs split by language and feature
 config/           Development proxy and browser switch
-scripts/          Rsbuild command-line entry point
+scripts/          Rsbuild launcher and background development commands
 tests/e2e/        Real-backend browser tests
 tests/dev/        Development option and language pack checks
 ```
