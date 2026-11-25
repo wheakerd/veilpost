@@ -86,18 +86,6 @@ $default-palette: 'abyss';
     --app-on-primary: #{$on-primary};
     --app-primary-soft: #{color.mix($primary, $surface, 10%)};
     --app-secondary-soft: #{color.mix($secondary, $surface, 12%)};
-    // A filled primary's hover and press move away from its text colour, so
-    // the text keeps 4.5:1 in every state.
-    @if $on-primary == #fff {
-        --app-primary-hover: #{color.mix(#000, $primary, 10%)};
-        --app-primary-press: #{color.mix(#000, $primary, 20%)};
-    } @else if $surface == #fff {
-        --app-primary-hover: #{color.mix(#fff, $primary, 15%)};
-        --app-primary-press: #{color.mix(#000, $primary, 8%)};
-    } @else {
-        --app-primary-hover: #{color.mix(#fff, $primary, 12%)};
-        --app-primary-press: #{color.mix($surface, $primary, 10%)};
-    }
     --el-color-primary: #{$primary};
     @each $step in 3, 5, 7, 8, 9 {
         --el-color-primary-light-#{$step}: #{color.mix(
@@ -284,17 +272,6 @@ $default-palette: 'abyss';
     --el-border-color: var(--app-border-strong);
     --el-border-color-light: var(--app-border);
     --el-border-color-lighter: var(--app-border);
-}
-
-// Text on a filled primary comes from the palette, in both modes. Plain,
-// text and link buttons keep Element's own colours.
-:root .el-button--primary:not(.is-plain, .is-text, .is-link) {
-    --el-button-text-color: var(--app-on-primary);
-    --el-button-hover-text-color: var(--app-on-primary);
-    --el-button-hover-bg-color: var(--app-primary-hover);
-    --el-button-active-text-color: var(--app-on-primary);
-    --el-button-active-bg-color: var(--app-primary-press);
-    --el-button-disabled-text-color: var(--app-on-primary);
 }
 
 :root .el-radio-button {

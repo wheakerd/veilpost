@@ -171,13 +171,8 @@ function drawLens(element: HTMLElement, state: GlassState) {
 }
 
 // Pieces of glass that carry the pointer light in their face
-// (styles/_glass.scss). Text and link buttons have no glass.
-const lightTargets = [
-    '.el-button:not(.is-text, .is-link)',
-    '[data-glass]',
-    '.page-tab',
-    '.app-manage-link',
-].join(', ')
+// (styles/_glass.scss).
+const lightTargets = '[data-glass], .page-tab'
 
 // Lights the piece of glass under the pointer, as Liquid Glass lights up
 // where it is touched: one delegated listener marks the piece and writes

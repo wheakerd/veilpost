@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import LabGlobe from '@/components/LabGlobe.vue'
 import { usePreferencesStore } from '@/stores/preferences'
-import { useModeCycle } from '@/composables/useModeCycle'
+import { useModeToggle } from '@/composables/useModeToggle'
 import { currentLocale, messages, supportedLocales, type Locale } from '@/i18n'
 import { formatClock } from '@/i18n/format'
 import { enteringConsole } from '@/composables/useSignInExit'
@@ -12,7 +12,7 @@ import { enteringConsole } from '@/composables/useSignInExit'
 const { t } = useI18n()
 const route = useRoute()
 const preferences = usePreferencesStore()
-const mode = useModeCycle()
+const mode = useModeToggle()
 const version = __APP_VERSION__
 
 function chooseLocale(locale: Locale) {
@@ -72,7 +72,7 @@ onBeforeUnmount(() => {
                     class="icon-button framed"
                     :aria-label="mode.label.value"
                     :title="mode.label.value"
-                    @click="mode.cycle"
+                    @click="mode.toggle"
                 >
                     <component :is="mode.icon.value" aria-hidden="true" />
                 </button>

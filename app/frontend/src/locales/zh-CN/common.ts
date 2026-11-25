@@ -29,6 +29,8 @@ const common = {
         account: {
             title: '个人中心',
             open: '打开个人中心',
+            profile: '资料',
+            loginSecurity: '登录与安全',
             twoFactorOn: '已启用两步验证',
             twoFactorOff: '未启用两步验证',
         },
@@ -49,7 +51,7 @@ const common = {
         refresh: '刷新当前页',
         // {mode} is one of modes.
         mode: '界面外观：{mode}',
-        modes: { light: '浅色', dark: '深色', system: '跟随系统' },
+        modes: { light: '浅色', dark: '深色' },
         language: '界面语言',
         followBrowser: '跟随浏览器',
         preferences: '偏好设置',

@@ -212,12 +212,16 @@ test('sidebar groups fold, and with one group at a time opening one folds the ot
     await expect(main.getByRole('link', { name: '证书' })).toBeVisible()
 
     await page.getByRole('switch', { name: '菜单栏行为' }).press('Space')
-    // Only the current page's group stays open.
+    // Single-group mode folds every group on the preferences page.
+    await expect(group('工作空间')).toHaveAttribute('aria-expanded', 'false')
+    await expect(group('软件')).toHaveAttribute('aria-expanded', 'false')
     await expect(group('安全')).toHaveAttribute('aria-expanded', 'false')
-    await expect(group('设置')).toHaveAttribute('aria-expanded', 'true')
+
+    await title('安全').click()
+    await expect(group('安全')).toHaveAttribute('aria-expanded', 'true')
     await title('工作空间').click()
     await expect(group('工作空间')).toHaveAttribute('aria-expanded', 'true')
-    await expect(group('设置')).toHaveAttribute('aria-expanded', 'false')
+    await expect(group('安全')).toHaveAttribute('aria-expanded', 'false')
     // Navigating opens the destination's group.
     await main.getByRole('link', { name: 'VPN 节点' }).click()
     await expect(page).toHaveURL(/\/nodes$/)
@@ -375,6 +379,16 @@ test('palette chips fit two columns, mark the choice and set the text on the pri
     await page.goto('/nodes')
     const html = page.locator('html')
     await expect(html).toHaveAttribute('data-theme', 'abyss')
+    const createNode = page.getByRole('button', {
+        name: '创建节点',
+        exact: true,
+    })
+    const buttonColors = () =>
+        createNode.evaluate((element) => {
+            const { backgroundColor, color } = getComputedStyle(element)
+            return { backgroundColor, color }
+        })
+    const abyssLight = await buttonColors()
 
     await page.getByRole('button', { name: '偏好设置' }).click()
     const drawer = page.getByRole('dialog', { name: '偏好设置' })
@@ -402,6 +416,12 @@ test('palette chips fit two columns, mark the choice and set the text on the pri
     expect(await stored(page)).toMatchObject({ palette: 'amber' })
     await page.keyboard.press('Escape')
     await expect(drawer).toBeHidden()
+    await expect.poll(buttonColors).not.toEqual(abyssLight)
+
+    const amberLight = await buttonColors()
+    await page.emulateMedia({ colorScheme: 'dark' })
+    await expect(html).toHaveClass(/\bdark\b/)
+    await expect.poll(buttonColors).not.toEqual(amberLight)
 
     // On a 320px screen the preferences page still holds two columns.
     await page.setViewportSize({ width: 320, height: 720 })

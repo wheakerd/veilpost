@@ -102,9 +102,9 @@ test('real login protects deep links, shows progress and restores sessions after
     await noStoredSecrets(page, account)
     await page
         .getByRole('navigation', { name: '主导航' })
-        .getByRole('link', { name: '偏好设置', exact: true })
+        .getByRole('link', { name: '账号安全', exact: true })
         .click()
-    await expect(page).toHaveURL('http://127.0.0.1:4173/settings/appearance')
+    await expect(page).toHaveURL('http://127.0.0.1:4173/settings/security')
     await signOut(page)
     await expect(page).toHaveURL('http://127.0.0.1:4173/login')
     await page.goBack()
@@ -378,6 +378,41 @@ test('cancelled binding clears temporary secrets and network failure gives retry
     await expect(page).toHaveURL('http://127.0.0.1:4173/login')
 })
 
+test('the account center protects unsaved recovery codes when leaving its security panel', async ({
+    page,
+    account,
+}) => {
+    await signIn(page, account)
+    await page.goto('/')
+    await page.getByRole('button', { name: '打开个人中心' }).click()
+    const centre = page.getByRole('dialog', { name: '个人中心' })
+    await centre.getByRole('button', { name: '登录与安全' }).click()
+    await centre.getByRole('button', { name: '启用两步验证' }).click()
+    await centre.getByLabel('当前密码', { exact: true }).fill(account.password)
+    await centre.getByRole('button', { name: '继续绑定' }).click()
+    const secret = await scanSetupQRCode(page, account.username)
+    await centre.getByLabel('验证码', { exact: true }).fill(code(secret))
+    await centre.getByRole('button', { name: '验证并启用' }).click()
+    const recovery = centre.getByRole('list', { name: '恢复码' })
+    await expect(recovery).toBeVisible()
+
+    const warning = page.locator('.el-message-box').filter({
+        hasText: '恢复码尚未保存',
+    })
+    await centre.getByRole('button', { name: '登录会话' }).click()
+    await expect(warning).toBeVisible()
+    await warning.getByRole('button', { name: '留在此页' }).click()
+    await expect(warning).toBeHidden()
+    await expect(recovery).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await expect(warning).toBeVisible()
+    await warning.getByRole('button', { name: '仍然离开' }).click()
+    await expect(centre).toBeHidden()
+    await expect(recovery).toHaveCount(0)
+    await noStoredSecrets(page, account)
+})
+
 test('external return paths are rejected with real authenticated sessions', async ({
     page,
     account,
@@ -416,24 +451,27 @@ test('password change rotates sessions and replaces the old password', async ({
         await page.goto('/settings/security')
         await expect(page.getByText('还有 1 个会话处于登录状态')).toBeVisible()
         await page.getByRole('button', { name: '修改密码' }).click()
-        await expect(page.locator('#current-password')).toBeFocused()
+        const current = page.getByLabel('当前密码', { exact: true })
+        const next = page.getByLabel('新密码', { exact: true })
+        const confirm = page.getByLabel('确认新密码', { exact: true })
+        await expect(current).toBeFocused()
         const nextPassword = `${account.password}-next`
-        await page.locator('#current-password').fill(account.password)
-        await page.locator('#new-password').fill(nextPassword)
-        await page.locator('#confirm-password').fill(`${nextPassword}!`)
+        await current.fill(account.password)
+        await next.fill(nextPassword)
+        await confirm.fill(`${nextPassword}!`)
         await page.getByRole('button', { name: '保存新密码' }).click()
         await expect(page.getByRole('alert')).toContainText(
             '两次输入的新密码不一致',
         )
-        await page.locator('#confirm-password').fill(account.password)
-        await page.locator('#new-password').fill(account.password)
+        await confirm.fill(account.password)
+        await next.fill(account.password)
         await page.getByRole('button', { name: '保存新密码' }).click()
         await expect(page.getByRole('alert')).toContainText(
             '不能与当前密码相同',
         )
-        await page.locator('#current-password').fill(account.password)
-        await page.locator('#new-password').fill(nextPassword)
-        await page.locator('#confirm-password').fill(nextPassword)
+        await current.fill(account.password)
+        await next.fill(nextPassword)
+        await confirm.fill(nextPassword)
         await page.getByRole('button', { name: '保存新密码' }).click()
         await expect(
             page.getByRole('status').filter({ hasText: '密码已修改' }),

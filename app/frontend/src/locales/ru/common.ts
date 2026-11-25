@@ -28,6 +28,8 @@ export default {
         account: {
             title: 'Личный кабинет',
             open: 'Открыть личный кабинет',
+            profile: 'Профиль',
+            loginSecurity: 'Вход и безопасность',
             twoFactorOn: 'Двухэтапная проверка включена',
             twoFactorOff: 'Двухэтапная проверка выключена',
         },
@@ -47,7 +49,7 @@ export default {
         expand: 'Развернуть боковую панель',
         refresh: 'Обновить страницу',
         mode: 'Оформление: {mode}',
-        modes: { light: 'Светлое', dark: 'Тёмное', system: 'Как в системе' },
+        modes: { light: 'Светлое', dark: 'Тёмное' },
         language: 'Язык интерфейса',
         followBrowser: 'Как в браузере',
         preferences: 'Настройки',

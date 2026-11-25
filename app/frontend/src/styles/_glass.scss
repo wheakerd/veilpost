@@ -7,9 +7,8 @@
 // resting just above it, with a gap between them, so every region gathers the
 // backdrop's colour. What floats above the content (menus, popovers, drawers,
 // dialogs, messages) is clearer glass that refracts along its rim. Buttons are
-// capsules of glass that light up where the pointer is and squeeze on a
-// spring when pressed. Content lies on the page panel without fills of its
-// own: panels and cards are hairline frames, so glass never stacks on glass.
+// solid tinted capsules with a spring press. Panels and cards use hairline
+// frames on the page panel, so glass never stacks on glass.
 //
 // Glass is drawn by its edge, not by a frosted fill: a specular light along
 // the upper left edge, a fainter one along the lower right, light scattered
@@ -130,7 +129,7 @@ $px: 0.0625rem;
     // Rows lit on glass take a translucent tint, so the glass shows through.
     --app-glass-tint: color-mix(in srgb, var(--app-primary) 10%, transparent);
 
-    // Buttons: neutral glass, and the lights a coloured piece keeps.
+    // Neutral glass for tabs and compact controls.
     --app-button-fill: #{glass-fill(-13%)};
     --app-button-fill-hover: #{glass-fill(1%)};
     --app-button-fill-press: #{glass-fill(15%)};
@@ -141,16 +140,6 @@ $px: 0.0625rem;
     --app-button-glow: rgb(255 255 255 / 22%);
     --app-button-outline: rgb(18 20 24 / 8%);
     --app-button-shadow-color: rgb(18 20 24 / 28%);
-    --app-button-sheen: linear-gradient(
-        180deg,
-        rgb(255 255 255 / 42%),
-        rgb(255 255 255 / 0%) 55%
-    );
-    --app-button-tint-sheen: linear-gradient(
-        180deg,
-        rgb(255 255 255 / 24%),
-        rgb(255 255 255 / 0%) 60%
-    );
 
     // The pointer light: on light neutral glass a white light would vanish,
     // so it takes the primary; dark glass and coloured pieces take white.
@@ -243,16 +232,6 @@ $px: 0.0625rem;
     --app-button-glow: rgb(255 255 255 / 8%);
     --app-button-outline: rgb(0 0 0 / 65%);
     --app-button-shadow-color: rgb(0 0 0 / 80%);
-    --app-button-sheen: linear-gradient(
-        180deg,
-        rgb(255 255 255 / 16%),
-        rgb(255 255 255 / 0%) 55%
-    );
-    --app-button-tint-sheen: linear-gradient(
-        180deg,
-        rgb(255 255 255 / 16%),
-        rgb(255 255 255 / 0%) 60%
-    );
     --app-light-color: #fff;
     --app-light-hover: 0.1;
     --app-light-press: 0.2;
@@ -281,25 +260,12 @@ $px: 0.0625rem;
         inset -0.09375rem -0.09375rem 0 -0.03125rem var(--app-edge-shade),
         inset 0 0 1.5rem var(--app-edge-glow),
         0 0 0 #{$px} var(--app-sheet-outline), var(--app-sheet-drop-modal);
-    // A button's three states share five layers, so they interpolate.
     --app-button-shadow-rest:
         inset 0 #{$px} 0 var(--app-button-light-top),
         inset 0 -#{$px} 0 var(--app-button-light-bottom),
         inset 0 0 0.75rem var(--app-button-glow),
         0 0 0 #{$px} var(--app-button-outline),
         0 0.375rem 1rem -0.5rem var(--app-button-shadow-color);
-    --app-button-shadow-hover:
-        inset 0 #{$px} 0 var(--app-button-light-top),
-        inset 0 -#{$px} 0 var(--app-button-light-bottom),
-        inset 0 0 0.75rem var(--app-button-glow),
-        0 0 0 #{$px} var(--app-button-outline),
-        0 0.625rem 1.375rem -0.625rem var(--app-button-shadow-color);
-    --app-button-shadow-press:
-        inset 0 #{$px} 0 var(--app-button-light-top),
-        inset 0 -#{$px} 0 var(--app-button-light-bottom),
-        inset 0 0 0.75rem var(--app-button-glow),
-        0 0 0 #{$px} var(--app-button-outline),
-        0 0.125rem 0.5rem -0.375rem var(--app-button-shadow-color);
     --app-light: radial-gradient(
         circle var(--app-light-radius) at var(--app-light-x, 50%)
             var(--app-light-y, 0%),
@@ -343,7 +309,6 @@ $px: 0.0625rem;
         --app-button-fill-press: var(--app-raised);
         --app-button-blur: none;
         --app-button-rim: var(--app-border-strong);
-        --app-button-sheen: none;
         --app-glass-tint: var(--app-primary-soft);
     }
 }
@@ -374,8 +339,6 @@ $px: 0.0625rem;
         --app-button-fill-press: var(--app-raised);
         --app-button-blur: none;
         --app-button-rim: color-mix(in srgb, var(--app-text) 40%, transparent);
-        --app-button-sheen: none;
-        --app-button-tint-sheen: none;
     }
 }
 
@@ -733,57 +696,6 @@ body {
         padding: 0 0.25rem;
     }
 }
-.account-avatar.is-large {
-    width: 2.75rem;
-    height: 2.75rem;
-    font-size: 1.125rem;
-}
-.account-card {
-    display: flex;
-    align-items: center;
-    gap: 0.875rem;
-    strong {
-        display: block;
-        font-size: 1rem;
-        font-weight: 500;
-        overflow-wrap: anywhere;
-    }
-    small {
-        color: var(--app-sheet-muted);
-        font-size: 0.8125rem;
-    }
-}
-.account-links {
-    display: grid;
-    gap: 2px;
-    margin-top: 1.25rem;
-}
-.account-link {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    min-height: 2.75rem;
-    padding: 0 0.75rem;
-    border-radius: var(--app-radius-row);
-    color: var(--app-text);
-    transition: background-color 140ms var(--app-ease);
-    > svg {
-        width: 1.125rem;
-        height: 1.125rem;
-        color: var(--app-sheet-muted);
-    }
-    &:hover,
-    &:focus-visible {
-        background: var(--app-glass-tint);
-    }
-}
-.account-link-chevron {
-    margin-left: auto;
-}
-.account-center .el-dialog__footer .el-button {
-    width: 100%;
-}
-
 // ---- Page tabs ----------------------------------------------------------
 
 // Every tab is a capsule with its own glass and border; the open page's tab
@@ -853,147 +765,102 @@ body {
 
 // ---- Buttons ------------------------------------------------------------
 
-// Element Plus buttons: neutral ones are frosted glass, coloured ones keep
-// their own opaque fill under the same lights, text and link buttons only
-// squeeze. A press scales to 0.97 on the snappy spring.
-.el-button:not(.is-text, .is-link) {
-    --el-button-border-color: var(--app-button-rim);
-    --el-button-hover-border-color: var(--app-button-rim);
-    --el-button-active-border-color: var(--app-button-rim);
+:root {
+    --app-action-tint-weight: 28%;
+    --app-action-ink-weight: 32%;
+    --app-action-border: transparent;
+}
+:root.dark {
+    --app-action-tint-weight: 26%;
+}
+@media (prefers-contrast: more) {
+    :root {
+        --app-action-border: var(--app-text);
+    }
+}
+
+:root :is(.el-button:not(.is-text, .is-link), .app-manage-link) {
+    --app-action-accent: var(--app-primary);
+    --app-action-fill: color-mix(
+        in srgb,
+        var(--app-action-accent) var(--app-action-tint-weight),
+        var(--app-surface)
+    );
+    --app-action-ink: color-mix(
+        in srgb,
+        var(--app-action-accent) var(--app-action-ink-weight),
+        var(--app-text)
+    );
+    --app-action-hover: color-mix(
+        in srgb,
+        var(--app-action-fill),
+        var(--app-action-ink) 8%
+    );
+    --app-action-press: color-mix(
+        in srgb,
+        var(--app-action-fill),
+        var(--app-action-ink) 15%
+    );
     border-radius: var(--app-radius-capsule);
-    box-shadow: var(--app-button-shadow-rest);
-    @include lit(var(--app-button-sheen));
+    background-image: none;
+    box-shadow: none;
     scale: 1;
     transition:
         scale var(--app-spring-snappy-duration) var(--app-spring-snappy),
-        background-color 180ms var(--app-ease),
-        border-color 180ms var(--app-ease),
-        color 180ms var(--app-ease),
-        box-shadow 180ms var(--app-ease),
-        filter 120ms var(--app-ease),
-        $light-motion;
-    @media (hover: hover) and (pointer: fine) {
-        &:hover:not(.is-disabled) {
-            box-shadow: var(--app-button-shadow-hover);
+        background-color 160ms var(--app-ease),
+        color 160ms var(--app-ease);
+
+    @each $type in success, warning, danger, info {
+        &:where(.el-button--#{$type}) {
+            --app-action-accent: var(--el-color-#{$type});
         }
     }
-    &:active:not(.is-disabled, .is-loading) {
+    &:active:not(:disabled, .is-disabled, .is-loading) {
         scale: 0.97;
-        box-shadow: var(--app-button-shadow-press);
-        transition-duration:
-            120ms, 180ms, 180ms, 180ms, 180ms, 120ms, 180ms, 260ms;
+        transition-duration: 120ms, 160ms, 160ms;
     }
-    &.is-disabled {
-        box-shadow: none;
-        background-image: none;
-    }
-}
-// One button: every button is the primary's filled capsule, the piece of
-// 启用两步验证 (user, 2026-11-23). Danger buttons keep the same piece in red.
-// Element Plus marks no type on a default button, so it is the button
-// without a colour type.
-.el-button:not(
-    .el-button--primary,
-    .el-button--success,
-    .el-button--warning,
-    .el-button--danger,
-    .el-button--info,
-    .is-text,
-    .is-link
-) {
-    --el-button-text-color: var(--app-on-primary);
-    --el-button-bg-color: var(--el-color-primary);
-    --el-button-hover-text-color: var(--app-on-primary);
-    --el-button-hover-bg-color: var(--app-primary-hover);
-    --el-button-active-text-color: var(--app-on-primary);
-    --el-button-active-bg-color: var(--app-primary-press);
-    --el-button-disabled-text-color: var(--app-on-primary);
-    --el-button-disabled-bg-color: var(--el-color-primary-light-5);
-    --el-button-disabled-border-color: transparent;
-}
-// A coloured piece: glints rather than strokes, a shadow tinted by its fill,
-// and a white pointer light; a press brightens it.
-.el-button:not(
-    .el-button--primary,
-    .el-button--success,
-    .el-button--warning,
-    .el-button--danger,
-    .el-button--info,
-    .is-text,
-    .is-link
-),
-.el-button--primary:not(.is-text, .is-link, .is-plain),
-.el-button--danger:not(.is-text, .is-link, .is-plain) {
-    --app-button-light-top: rgb(255 255 255 / 30%);
-    --app-button-light-bottom: rgb(255 255 255 / 12%);
-    --app-button-glow: rgb(255 255 255 / 14%);
-    --app-button-outline: rgb(0 0 0 / 12%);
-    --app-button-shadow-color: color-mix(
-        in srgb,
-        var(--el-button-bg-color) 55%,
-        transparent
-    );
-    --app-light-color: #fff;
-    --app-light-hover: 0.18;
-    --app-light-press: 0.3;
-    --el-button-border-color: transparent;
-    --el-button-hover-border-color: transparent;
-    --el-button-active-border-color: transparent;
-    @include lit(var(--app-button-tint-sheen));
-    &:active:not(.is-disabled, .is-loading) {
-        filter: brightness(1.08);
+    &:focus-visible {
+        outline: 2px solid var(--app-action-accent);
+        outline-offset: 2px;
     }
 }
 
-// The dark danger red is light, so its text is ink, as on every light fill.
-:root.dark .el-button--danger:not(.is-plain, .is-text, .is-link) {
-    --el-button-text-color: #0b0d11;
-    --el-button-hover-text-color: #0b0d11;
-    --el-button-active-text-color: #0b0d11;
-    --el-button-disabled-text-color: #0b0d11;
+:root .el-button:not(.is-plain, .is-text, .is-link) {
+    --el-button-bg-color: var(--app-action-fill);
+    --el-button-text-color: var(--app-action-ink);
+    --el-button-border-color: var(--app-action-border);
+    --el-button-hover-bg-color: var(--app-action-hover);
+    --el-button-hover-text-color: var(--app-action-ink);
+    --el-button-hover-border-color: var(--app-action-border);
+    --el-button-active-bg-color: var(--app-action-press);
+    --el-button-active-text-color: var(--app-action-ink);
+    --el-button-active-border-color: var(--app-action-border);
+    --el-button-disabled-bg-color: color-mix(
+        in srgb,
+        var(--app-action-fill) 44%,
+        var(--app-surface)
+    );
+    --el-button-disabled-text-color: var(--app-muted);
+    --el-button-disabled-border-color: var(--app-action-border);
 }
 
-// A link that acts as a button is the same piece.
-.app-manage-link {
-    --app-button-light-top: rgb(255 255 255 / 30%);
-    --app-button-light-bottom: rgb(255 255 255 / 12%);
-    --app-button-glow: rgb(255 255 255 / 14%);
-    --app-button-outline: rgb(0 0 0 / 12%);
-    --app-button-shadow-color: color-mix(
-        in srgb,
-        var(--el-color-primary) 55%,
-        transparent
-    );
-    --app-light-color: #fff;
-    --app-light-hover: 0.18;
-    --app-light-press: 0.3;
+:root .app-manage-link {
     justify-content: center;
     min-height: 2.25rem;
     padding: 0.25rem 1rem;
-    border-color: transparent;
-    border-radius: var(--app-radius-capsule);
-    background-color: var(--el-color-primary);
-    color: var(--app-on-primary);
-    box-shadow: var(--app-button-shadow-rest);
+    border: $px solid var(--app-action-border);
+    background-color: var(--app-action-fill);
+    color: var(--app-action-ink);
     @media (hover: hover) and (pointer: fine) {
         &:hover {
-            background-color: var(--app-primary-hover);
-            box-shadow: var(--app-button-shadow-hover);
+            background-color: var(--app-action-hover);
         }
     }
     &:active {
-        background-color: var(--app-primary-press);
-        box-shadow: var(--app-button-shadow-press);
+        background-color: var(--app-action-press);
     }
 }
 
-// Other pressable pieces of glass carry the light as well.
-.app-manage-link {
-    @include lit(var(--app-button-tint-sheen));
-    transition-property:
-        background-color, border-color, color, transform, box-shadow,
-        --app-light-alpha, --app-light-radius;
-}
 .page-tab {
     @include lit;
     transition-property:
@@ -1209,12 +1076,14 @@ body {
 // Reduce Motion removes the squeeze and the swell.
 @media (prefers-reduced-motion: reduce) {
     .el-button,
+    .app-manage-link,
     .tool-group[data-glass] {
         scale: 1 !important;
     }
 }
 :root[data-reduced-motion='true'] {
     .el-button,
+    .app-manage-link,
     .tool-group[data-glass] {
         scale: 1 !important;
     }

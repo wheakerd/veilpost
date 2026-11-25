@@ -106,6 +106,8 @@ test('system preferences react to changes and invalid stored values recover', as
     await page.goto('/')
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'abyss')
     await expect(page.locator('html')).toHaveClass('dark')
+    const mode = page.getByRole('button', { name: /^界面外观：/ })
+    await expect(mode).toHaveAccessibleName('界面外观：深色')
     await expect(page.locator('html')).toHaveAttribute(
         'data-reduced-motion',
         'true',
@@ -115,6 +117,7 @@ test('system preferences react to changes and invalid stored values recover', as
         reducedMotion: 'no-preference',
     })
     await expect(page.locator('html')).not.toHaveClass('dark')
+    await expect(mode).toHaveAccessibleName('界面外观：浅色')
     await expect(page.locator('html')).toHaveAttribute(
         'data-reduced-motion',
         'false',
