@@ -54,7 +54,7 @@ make release VERSION=v0.1.0
 
 原生检查需要固定版本 Go、Node、Bun、GNU Make、Python 3.11+ 和 C 编译器。浏览器测试默认四个 worker，使用 4173 及随机后端端口；通过真实 Go/SQLite 服务验证，不使用接口 Mock。临时测试账号、数据库和密钥在测试结束后销毁。首次安装浏览器可在 app/frontend 中运行 `bunx playwright install chromium`。`make build` 将前端产物输出到仓库根目录 `dist/frontend/`，并产出 `app/backend/bin/veilpost-api` 与 `app/agent/bin/veilpost-agent`。
 
-可通过 `make native-start` / `native-stop` / `native-restart` / `native-status` 使用原生开发模式。与 Compose 的数据库相互独立，切换前先停止另一种模式，避免占用相同前端端口。
+在装有 `flock` 的 Linux 上，可使用 `make native-start`、`make native-stop`、`make native-restart`、`make native-status` 和 `make native-logs` 管理原生开发环境。Go 后端控制器持有共享的开发锁，并调用 TypeScript 前端启动器。只管理后端时，可使用 `make -C app/backend dev-start` 和对应的 `dev-stop`、`dev-restart`、`dev-status`、`dev-logs` 目标。原生开发与 Compose 各自使用独立的数据库。切换前先停止当前环境，释放前端端口。
 
 ## 发布产物
 

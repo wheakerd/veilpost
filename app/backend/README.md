@@ -12,7 +12,9 @@ Administrator initialization uses `scripts/admin-create.sh` and does not depend 
 
 For native deployment, use `VPN_API_BIN=/path/veilpost-api VPN_DATA_DIR=/path/data GENERATE_PASSWORD=1 sh scripts/admin-create.sh`; `VPN_DATA_DIR` must match the running service. `VPN_CREDENTIALS_DIR` sets the directory for the password file. Production release packages include a standalone `admin-create.sh` that can be run directly.
 
-Native start:
+For native development on Linux, run `make dev-start` in `app/backend/` to build and start the backend in the background. Use `make dev-status` to see its loopback port, `make dev-logs` for recent logs, and `make dev-restart` or `make dev-stop` to manage the process. The Go launcher uses the same process records and `.runtime/backend-data` directory as the repository's `make native-*` commands. The frontend development launcher discovers the running backend automatically.
+
+To run the backend in the foreground:
 
 ```bash
 VPN_ENV=development VPN_DATA_DIR=../../.runtime/backend-data make run

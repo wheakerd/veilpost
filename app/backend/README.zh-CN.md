@@ -21,7 +21,9 @@ sudo。密码通过标准输入交给后端，保存到 Git 忽略的 `.runtime/
 `VPN_DATA_DIR` 必须与运行中的服务一致。可用 `VPN_CREDENTIALS_DIR` 指定密码文件目录。生产发布包附带独立的 `admin-create.sh`
 ，可直接运行。
 
-原生启动：
+在 Linux 上，在 `app/backend/` 中运行 `make dev-start` 可构建后端并在后台启动。`make dev-status` 显示实际回环端口，`make dev-logs` 查看最近的日志，`make dev-restart` 和 `make dev-stop` 分别重启和停止后端。Go 启动器与仓库根目录的 `make native-*` 共用进程记录和 `.runtime/backend-data` 数据目录。前端开发启动器会自动识别运行中的后端。
+
+如需在前台运行后端：
 
 ```bash
 VPN_ENV=development VPN_DATA_DIR=../../.runtime/backend-data make run

@@ -13,7 +13,7 @@ export VPN_DATA_DIR
 export VPN_CREDENTIALS_DIR
 export FRONTEND_PORT
 
-.PHONY: help install start stop restart status logs test check build release publish admin-create admin-reset-password admin-reset-two-factor native-start native-stop native-restart native-status
+.PHONY: help install start stop restart status logs test check build release publish admin-create admin-reset-password admin-reset-two-factor native-start native-stop native-restart native-status native-logs
 
 help:
 	@python3 scripts/project.py help
@@ -31,8 +31,8 @@ admin-create:
 admin-reset-password admin-reset-two-factor:
 	@ADMIN_ACTION=$(patsubst admin-%,%,$@) sh scripts/admin-create.sh
 
-native-start native-stop native-restart native-status:
-	@python3 scripts/project.py $(patsubst native-%,%,$@)
+native-start native-stop native-restart native-status native-logs:
+	@$(MAKE) --no-print-directory -C app/backend $@
 
 release:
 	@python3 scripts/release.py
