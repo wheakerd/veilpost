@@ -1,7 +1,16 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    reactive,
+    ref,
+    toRef,
+    watch,
+} from 'vue'
+import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import PackageSearch from '~icons/lucide/package-search'
 import PageIntro from '@/components/PageIntro.vue'
 import PasswordField from '@/components/PasswordField.vue'
 import AuthFeedback from '@/components/AuthFeedback.vue'
@@ -21,12 +30,12 @@ import { useCatalogText } from '@/composables/useCatalogText'
 import { formatDateTime } from '@/i18n/format'
 import { useCachedPage } from '@/composables/useCachedPage'
 
+const props = defineProps<{ id: string }>()
 const { t } = useI18n()
 const catalogText = useCatalogText()
 const redirectIfExpired = useSessionExpiry()
-const route = useRoute()
 const store = useAppsStore()
-const id = computed(() => String(route.params.id))
+const id = toRef(props, 'id')
 const phase = ref<
     'loading' | 'ready' | 'missing' | 'notInstalled' | 'unavailable'
 >('loading')
@@ -274,40 +283,43 @@ onBeforeUnmount(clearSecrets)
 <template>
     <div>
         <div v-if="phase === 'loading'" class="app-loading">
-            <LoadingState />
+            <LoadingState :title="t('common.status.loading')" />
         </div>
 
         <div
             v-else-if="phase === 'missing' || phase === 'notInstalled'"
-            class="app-guidance"
+            class="app-guidance plain-panel empty-state"
         >
-            <PageIntro
-                :eyebrow="t('common.shell.groups.software')"
-                :title="
+            <span class="empty-icon" aria-hidden="true"><PackageSearch /></span>
+            <h1>
+                {{
                     phase === 'missing'
                         ? t('apps.app.notFound.title')
                         : t('apps.app.notInstalled.title', { name })
-                "
-                :description="
+                }}
+            </h1>
+            <p>
+                {{
                     phase === 'missing'
                         ? t('apps.app.notFound.description')
                         : t('apps.app.notInstalled.description')
-                "
-            >
-                <RouterLink to="/store" class="app-manage-link">{{
-                    t('apps.app.toStore')
-                }}</RouterLink>
-            </PageIntro>
+                }}
+            </p>
+            <RouterLink to="/store" class="app-manage-link">{{
+                t('apps.app.toStore')
+            }}</RouterLink>
             <AuthFeedback :message="notice" tone="notice" />
         </div>
 
-        <div v-else-if="phase === 'unavailable' || !app" class="empty-state">
+        <div
+            v-else-if="phase === 'unavailable' || !app"
+            class="plain-panel empty-state"
+        >
             <p role="status">{{ t('apps.app.unavailable') }}</p>
         </div>
 
         <template v-else>
             <PageIntro
-                :eyebrow="t('common.shell.groups.software')"
                 :title="name"
                 :description="catalogText(app.description)"
             />
@@ -316,12 +328,13 @@ onBeforeUnmount(clearSecrets)
                 class="plain-panel app-panel"
                 aria-labelledby="settings-title"
             >
-                <div class="panel-heading">
+                <div class="panel-heading app-settings-heading">
                     <h2 id="settings-title">
                         {{ t('apps.app.settings.title') }}
                     </h2>
                     <ElTag
                         v-if="settings"
+                        class="app-status"
                         :type="settings.configured ? 'success' : 'warning'"
                         effect="plain"
                         data-testid="settings-state"

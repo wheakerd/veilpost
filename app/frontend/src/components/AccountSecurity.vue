@@ -309,17 +309,24 @@ function finish() {
                         ><Lock aria-hidden="true"
                     /></span>
                     <div>
-                        <h2 :id="fieldId('security-title')">
-                            {{ t('security.twoFactor.title') }}
-                        </h2>
+                        <div class="security-title">
+                            <h2 :id="fieldId('security-title')">
+                                {{ t('security.twoFactor.title') }}
+                            </h2>
+                            <ElTag
+                                :type="enabled ? 'success' : 'info'"
+                                effect="plain"
+                                disable-transitions
+                                >{{
+                                    enabled
+                                        ? t('security.twoFactor.enabled')
+                                        : t('security.twoFactor.disabled')
+                                }}</ElTag
+                            >
+                        </div>
                         <p>{{ t('security.twoFactor.description') }}</p>
                     </div>
                 </div>
-                <ElTag :type="enabled ? 'success' : 'info'" effect="plain">{{
-                    enabled
-                        ? t('security.twoFactor.enabled')
-                        : t('security.twoFactor.disabled')
-                }}</ElTag>
             </div>
             <motion.div
                 :key="phase"

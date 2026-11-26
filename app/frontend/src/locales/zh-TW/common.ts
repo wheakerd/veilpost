@@ -61,7 +61,6 @@ export default {
     },
     loading: {
         title: '正在載入控制台',
-        description: '正在還原你的登入狀態，請稍候。',
     },
     notFound: {
         title: '這個頁面不存在',
@@ -81,8 +80,6 @@ export default {
     password: {
         label: '密碼',
         current: '目前的密碼',
-        show: '顯示',
-        hide: '隱藏',
         showLabel: '顯示密碼',
         hideLabel: '隱藏密碼',
         capsLock: '大寫鎖定已開啟',

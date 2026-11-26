@@ -61,7 +61,6 @@ export default {
     },
     loading: {
         title: 'Загрузка консоли',
-        description: 'Восстанавливаем ваш сеанс. Подождите немного.',
     },
     notFound: {
         title: 'Такой страницы нет',
@@ -81,8 +80,6 @@ export default {
     password: {
         label: 'Пароль',
         current: 'Текущий пароль',
-        show: 'Показать',
-        hide: 'Скрыть',
         showLabel: 'Показать пароль',
         hideLabel: 'Скрыть пароль',
         capsLock: 'Включён Caps Lock',

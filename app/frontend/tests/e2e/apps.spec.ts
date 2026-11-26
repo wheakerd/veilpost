@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { expect, type Page } from '@playwright/test'
+import { expect, type Page, type Request } from '@playwright/test'
 import {
     test,
     signIn,
@@ -208,6 +208,26 @@ test('an app that is not installed guides to the store, including deep links', a
         )
         expect(settings.status()).toBe(404)
         expect(await settings.json()).toEqual({ code: 'APP_NOT_INSTALLED' })
+
+        const requests: string[] = []
+        const record = (request: Request) => {
+            requests.push(request.url())
+        }
+        page.on('request', record)
+        await page
+            .getByRole('navigation', { name: '主导航' })
+            .getByRole('link', { name: 'VPN 节点', exact: true })
+            .click()
+        await expect(
+            page.getByRole('heading', { name: 'VPN 节点', exact: true }),
+        ).toBeVisible()
+        page.off('request', record)
+        expect(requests).not.toContain(`${origin}/api/apps`)
+        await page.goBack()
+        await expect(
+            page.getByRole('heading', { name: '“Xray-core”尚未安装' }),
+        ).toBeVisible()
+
         await page.getByRole('link', { name: '前往软件商店' }).click()
         await expect(page).toHaveURL(`${origin}/store`)
         await expect(
@@ -291,11 +311,17 @@ test('settings are validated by the server and sensitive values are write-only',
             '留空则保留已保存的值',
         )
         await expectNoSecret(page, secret)
-        await page.screenshot({
-            path: testInfo.outputPath('app-settings.png'),
-            fullPage: true,
-            animations: 'disabled',
-        })
+        for (const colorScheme of ['light', 'dark'] as const) {
+            await page.emulateMedia({ colorScheme })
+            await expect(page.locator('html')).toHaveCSS(
+                'color-scheme',
+                colorScheme,
+            )
+            await page.screenshot({
+                path: testInfo.outputPath(`app-settings-${colorScheme}.png`),
+                animations: 'disabled',
+            })
+        }
 
         // The server never returns the value, and it survives a reload as "set".
         for (const path of ['/api/apps', '/api/apps/hysteria2/settings']) {

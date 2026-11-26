@@ -3,6 +3,8 @@ import { nextTick, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { I18nT, useI18n } from 'vue-i18n'
 import ArrowRight from '~icons/lucide/arrow-right'
+import LockKeyhole from '~icons/lucide/lock-keyhole'
+import UserRound from '~icons/lucide/user-round'
 import PasswordField from '@/components/PasswordField.vue'
 import { authApi, AuthApiError, authErrorMessage } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
@@ -58,10 +60,7 @@ async function submit() {
         const redirect = safeReturnPath(route.query.redirect)
         if (session.status === 'mfa_required')
             await router.replace({ path: '/login/verify', query: { redirect } })
-        else
-            await enterConsole(reduceMotion.value, () =>
-                router.replace(redirect),
-            )
+        else await enterConsole(() => router.replace(redirect))
     } catch (cause) {
         error.value = authErrorMessage(cause)
         // Rejected credentials shake the form once.
@@ -82,65 +81,84 @@ async function submit() {
 </script>
 
 <template>
-    <p class="auth-step readout">{{ t('auth.login.step') }}</p>
     <h1>{{ t('auth.login.title') }}</h1>
-    <p class="auth-description">{{ t('auth.login.description') }}</p>
-    <p
-        v-if="route.query.reason === 'expired'"
-        class="form-notice"
-        role="status"
+    <div
+        v-if="
+            route.query.reason === 'expired' ||
+            auth.serviceError ||
+            auth.setupRequired
+        "
+        class="auth-notices"
     >
-        {{ t('auth.login.expired') }}
-    </p>
-    <AuthFeedback :message="auth.serviceError" tone="notice" />
-    <ElButton
-        v-if="auth.serviceError"
-        class="retry-connection"
-        :loading="busy"
-        @click="retry"
-        >{{ t('auth.login.retry') }}</ElButton
-    >
-    <I18nT
-        v-if="auth.setupRequired"
-        keypath="auth.login.setupRequired"
-        tag="p"
-        class="form-notice setup-required"
-        role="status"
-    >
-        <template #command><code>make admin-create</code></template>
-    </I18nT>
-    <ElButton
-        v-if="auth.setupRequired"
-        class="retry-connection"
-        :loading="busy"
-        @click="retry"
-        >{{ t('auth.login.recheck') }}</ElButton
-    >
+        <p
+            v-if="route.query.reason === 'expired'"
+            class="form-notice"
+            role="status"
+        >
+            {{ t('auth.login.expired') }}
+        </p>
+        <AuthFeedback :message="auth.serviceError" tone="notice" />
+        <ElButton
+            v-if="auth.serviceError"
+            class="retry-connection"
+            :loading="busy"
+            @click="retry"
+            >{{ t('auth.login.retry') }}</ElButton
+        >
+        <I18nT
+            v-if="auth.setupRequired"
+            keypath="auth.login.setupRequired"
+            tag="p"
+            class="form-notice setup-required"
+            role="status"
+        >
+            <template #command><code>make admin-create</code></template>
+        </I18nT>
+        <ElButton
+            v-if="auth.setupRequired"
+            class="retry-connection"
+            :loading="busy"
+            @click="retry"
+            >{{ t('auth.login.recheck') }}</ElButton
+        >
+    </div>
     <form
         ref="form"
-        class="auth-form"
+        class="auth-form login-form"
         :aria-busy="busy"
         @submit.prevent="submit"
     >
-        <div class="form-field">
-            <label for="username">{{ t('auth.login.username') }}</label>
-            <ElInput
-                id="username"
-                v-model="username"
-                name="username"
-                autocomplete="username"
-                autocapitalize="none"
-                :spellcheck="false"
-                required
-                maxlength="64"
+        <div class="login-fields">
+            <div class="form-field">
+                <label for="username"
+                    ><span>{{ t('auth.login.username') }}</span></label
+                >
+                <ElInput
+                    id="username"
+                    v-model="username"
+                    name="username"
+                    autocomplete="username"
+                    autocapitalize="none"
+                    placeholder=" "
+                    :spellcheck="false"
+                    required
+                    maxlength="64"
+                    :disabled="busy || auth.setupRequired"
+                >
+                    <template #prefix
+                        ><UserRound aria-hidden="true"
+                    /></template>
+                </ElInput>
+            </div>
+            <PasswordField
+                id="password"
+                v-model="password"
+                placeholder=" "
                 :disabled="busy || auth.setupRequired"
-            />
+            >
+                <template #prefix><LockKeyhole aria-hidden="true" /></template>
+            </PasswordField>
         </div>
-        <PasswordField
-            id="password"
-            v-model="password"
-            :disabled="busy || auth.setupRequired"
-        />
         <AuthFeedback id="login-error" :message="error" />
         <ElButton
             class="form-submit"
@@ -157,15 +175,8 @@ async function submit() {
                       ? t('auth.login.signingIn')
                       : t('auth.login.submit')
             }}
-            <ArrowRight v-if="!busy" class="button-icon" />
+            <ArrowRight v-if="!busy" class="button-icon" aria-hidden="true" />
         </ElButton>
-        <I18nT keypath="auth.login.keyHint" tag="p" class="key-hint">
-            <template #key><kbd>Enter</kbd></template>
-        </I18nT>
     </form>
-    <p class="auth-help">
-        {{ t('auth.login.helpTwoFactor') }}<br />{{
-            t('auth.login.helpContact')
-        }}
-    </p>
+    <p class="auth-help">{{ t('auth.login.helpContact') }}</p>
 </template>

@@ -1,135 +1,140 @@
 @use 'sass:color';
-@use 'sass:list';
 @use 'sass:map';
 
-// Theme palettes, in the order of the preference chips (src/theme/palettes.ts
-// holds the same ids and light colours). Each entry is
-// (primary, secondary, on-primary) for light mode, then the same for dark.
-// The primary marks actions and selection; the secondary is its partner, the
-// one figure that matters on a screen and the second tint of the backdrop.
-// On-primary is the text on a filled primary: white where it reaches 4.5:1,
-// otherwise ink. Light primaries keep 3:1 or more on white so they also read
-// as text and icons; dark variants read on the dark surface #12151b.
-$ink-light: #121418;
+// Global CSS custom properties for the console, its components and the startup screen.
+
+// Both the active theme and the preference samples use these colours.
+// The primary carries actions and selection. The secondary marks readings.
 $ink-dark: #0b0d11;
+$surface-light: #fafbfc;
+$surface-dark: #191c20;
 $palettes: (
+    'lab': (
+        light: (
+            primary: #38e878,
+            secondary: #b8ef2c,
+        ),
+        dark: (
+            primary: #5bfa96,
+            secondary: #d1ff56,
+        ),
+    ),
     'abyss': (
-        #4b4ee6,
-        #c2289f,
-        #fff,
-        #8b8dff,
-        #f06fd4,
-        $ink-dark,
+        light: (
+            primary: #527bff,
+            secondary: #ff9445,
+        ),
+        dark: (
+            primary: #7b9aff,
+            secondary: #ffae63,
+        ),
     ),
     'sky': (
-        #0b96d4,
-        #7048e8,
-        $ink-light,
-        #4cc3f5,
-        #a38bff,
-        $ink-dark,
-    ),
-    'emerald': (
-        #0ea57d,
-        #2f6fe8,
-        $ink-light,
-        #3ddbb0,
-        #79a6ff,
-        $ink-dark,
-    ),
-    'mist': (
-        #10a196,
-        #e2533f,
-        $ink-light,
-        #3cccc0,
-        #ff8f7d,
-        $ink-dark,
+        light: (
+            primary: #16bcff,
+            secondary: #aa6cff,
+        ),
+        dark: (
+            primary: #40d9ff,
+            secondary: #c392ff,
+        ),
     ),
     'amber': (
-        #d47b00,
-        #5b46e0,
-        $ink-light,
-        #ffb347,
-        #9c8cff,
-        $ink-dark,
-    ),
-    'coral': (
-        #f3604a,
-        #0b8f8a,
-        $ink-light,
-        #ff8a75,
-        #4fd6cc,
-        $ink-dark,
+        light: (
+            primary: #ffb820,
+            secondary: #17d5bf,
+        ),
+        dark: (
+            primary: #ffd04a,
+            secondary: #37ebd1,
+        ),
     ),
     'rose': (
-        #dc2a66,
-        #8a3ff0,
-        #fff,
-        #ff6f9c,
-        #b18aff,
-        $ink-dark,
+        light: (
+            primary: #f54ea1,
+            secondary: #aa77ff,
+        ),
+        dark: (
+            primary: #ff76b9,
+            secondary: #c591ff,
+        ),
     ),
     'violet': (
-        #9b3cf0,
-        #0a95c9,
-        #fff,
-        #c08aff,
-        #5fd2ff,
-        $ink-dark,
+        light: (
+            primary: #a16aff,
+            secondary: #16c8ff,
+        ),
+        dark: (
+            primary: #bd88ff,
+            secondary: #4ae0ff,
+        ),
     ),
 );
 $default-palette: 'abyss';
 
-@mixin brand($primary, $secondary, $on-primary, $surface, $opposite) {
-    --app-primary: #{$primary};
-    --app-secondary: #{$secondary};
-    --app-on-primary: #{$on-primary};
-    --app-primary-soft: #{color.mix($primary, $surface, 10%)};
-    --app-secondary-soft: #{color.mix($secondary, $surface, 12%)};
-    --el-color-primary: #{$primary};
-    @each $step in 3, 5, 7, 8, 9 {
-        --el-color-primary-light-#{$step}: #{color.mix(
-                $surface,
-                $primary,
-                $step * 10%
-            )};
-    }
-    --el-color-primary-dark-2: #{color.mix($opposite, $primary, 20%)};
-}
-
 @mixin palette($colors, $mode) {
-    @if $mode == light {
-        @include brand(
-            list.nth($colors, 1),
-            list.nth($colors, 2),
-            list.nth($colors, 3),
-            #fff,
-            #000
-        );
-    } @else {
-        @include brand(
-            list.nth($colors, 4),
-            list.nth($colors, 5),
-            list.nth($colors, 6),
-            #12151b,
-            #fff
-        );
-    }
+    $pair: map.get($colors, $mode);
+    $primary: map.get($pair, primary);
+    --app-primary: #{$primary};
+    --app-secondary: #{map.get($pair, secondary)};
+    --el-color-primary-rgb:
+        #{color.channel($primary, 'red', $space: rgb)},
+        #{color.channel($primary, 'green', $space: rgb)},
+        #{color.channel($primary, 'blue', $space: rgb)};
 }
 
-// Cold instrument neutrals. Surfaces stay grey in both modes; color lives in
-// the accent, the status marks and the login globe.
+// Neutral surfaces keep the palette accents distinct in both modes.
 :root {
-    --app-bg: #eef0f3;
-    --app-sidebar: #f7f8fa;
-    --app-surface: #ffffff;
-    --app-raised: #f2f4f7;
-    --app-text: #121418;
-    --app-text-secondary: #464c57;
-    --app-muted: #5c6370;
-    --app-border: rgb(18 20 24 / 10%);
-    --app-border-strong: rgb(18 20 24 / 18%);
-    --app-grid: rgb(18 20 24 / 4.5%);
+    --preview-light-surface: #{$surface-light};
+    --preview-dark-surface: #{$surface-dark};
+    color-scheme: light dark;
+    --app-on-primary: #{$ink-dark};
+    --app-accent-contrast: #{$ink-dark};
+    --app-accent-weight: 42%;
+    --app-accent-text: color-mix(
+        in srgb,
+        var(--app-primary) var(--app-accent-weight),
+        var(--app-accent-contrast)
+    );
+    --app-secondary-text: color-mix(
+        in srgb,
+        var(--app-secondary) var(--app-accent-weight),
+        var(--app-accent-contrast)
+    );
+    --app-primary-soft: color-mix(
+        in srgb,
+        var(--app-primary) 10%,
+        var(--app-surface)
+    );
+    --app-secondary-soft: color-mix(
+        in srgb,
+        var(--app-secondary) 12%,
+        var(--app-surface)
+    );
+    --app-bg: #edf0f7;
+    --app-frame-end: #f3f1f6;
+    --app-card-surface: #fff;
+    --app-card-shadow:
+        0 2px 4px rgb(31 45 70 / 3%), 0 6px 18px -8px rgb(31 45 70 / 18%);
+    --app-card-hover-shadow: 0 4px 16px -5px rgb(31 45 70 / 20%);
+    --app-reading-width: 67rem;
+    --app-route-heading: clamp(1.55rem, 1.2rem + 0.75vw, 1.95rem);
+    --app-icon-tile-size: 2.5rem;
+    --app-selection-border: color-mix(
+        in srgb,
+        var(--app-primary) 42%,
+        var(--app-surface)
+    );
+    --app-card-border: color-mix(in srgb, var(--app-text) 10%, transparent);
+    --app-sidebar: #f3f5f7;
+    --app-surface: #{$surface-light};
+    --app-raised: #f0f2f5;
+    --app-text: #161b22;
+    --app-text-secondary: #3c4653;
+    --app-muted: #4b5867;
+    --app-border: rgb(22 27 34 / 13%);
+    --app-border-strong: rgb(22 27 34 / 23%);
+    --app-grid: rgb(22 27 34 / 4%);
     --app-danger: #b42318;
     --app-danger-soft: #fdf0ef;
     --app-danger-border: #e9ada7;
@@ -137,24 +142,155 @@ $default-palette: 'abyss';
     --app-warning: #9a6200;
     --app-hazard: #f2c12e;
     --app-hazard-ink: #15171c;
-    --app-nav-surface: var(--app-raised);
     --app-shadow: 0 1px 2px rgb(18 20 24 / 5%);
     --app-chrome-shadow: 0 8px 24px rgb(18 20 24 / 8%);
     --app-font:
         -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, 'PingFang SC',
         'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
-    --app-display-font: var(--app-font);
+    --app-display-font:
+        Bahnschrift, 'DIN Alternate', 'Arial Narrow', var(--app-font);
     --app-mono-font:
         'JetBrains Mono', 'SFMono-Regular', 'Cascadia Mono', 'Menlo', Consolas,
         monospace;
-    // One radius scale: capsules for every single-line box (buttons, fields,
-    // tags, tabs), then control rows, cards and panes as their size asks.
+    // Sign-in artwork.
+    --app-art-light: #eef2f6;
+    --app-art-mid: #d9e1e8;
+    --app-art-low: #bac6d2;
+    --app-art-edge: #a5b3c0;
+    --app-art-seam: rgb(68 87 108 / 18%);
+    --app-art-highlight: rgb(255 255 255 / 75%);
+    --app-art-shadow: rgb(39 60 81 / 36%);
+    --app-art-mark-filter: grayscale(1) brightness(1.55);
+    --app-art-mark-blend: multiply;
+    --app-art-mark-opacity: 0.83;
+
+    // Shared control and content surfaces.
+    --app-action-tint-weight: 28%;
+    --app-action-ink-weight: 32%;
+    --app-action-border: transparent;
+    --app-account-selected-fill: color-mix(
+        in srgb,
+        var(--app-primary) 26%,
+        var(--app-surface)
+    );
+    --app-account-selected-ink: color-mix(
+        in srgb,
+        var(--app-primary) 36%,
+        var(--app-text)
+    );
+    --app-profile-row-fill: color-mix(
+        in srgb,
+        var(--app-primary) 13%,
+        var(--app-surface)
+    );
+    --app-dialog-fill: color-mix(
+        in srgb,
+        var(--app-raised) 62%,
+        var(--app-sheet-fill-strong)
+    );
+    --app-field-surface: color-mix(
+        in srgb,
+        var(--app-surface) 70%,
+        var(--app-raised)
+    );
+    --app-code-filled-border: color-mix(
+        in srgb,
+        var(--app-primary) 60%,
+        transparent
+    );
+    --app-preview-border: color-mix(
+        in srgb,
+        var(--app-primary) 30%,
+        transparent
+    );
+    --app-field-hover-border: color-mix(
+        in srgb,
+        var(--app-text) 35%,
+        transparent
+    );
+    --app-online-halo: color-mix(in srgb, var(--app-positive) 18%, transparent);
+    --app-tab-active-border: color-mix(
+        in srgb,
+        var(--app-primary) 45%,
+        transparent
+    );
+    --app-tab-active-fill: color-mix(
+        in srgb,
+        var(--app-primary) 14%,
+        transparent
+    );
+    --app-qr-paper: white;
+    --app-mask-opaque: black;
+    // The splash resolves the saved or system color scheme before Vue starts.
+    --app-boot-surface: light-dark(#{$surface-light}, #{$surface-dark});
+    --app-boot-ink: light-dark(#25303b, #e3e9ef);
+    --app-boot-track: color-mix(in srgb, currentColor 14%, transparent);
+
+    // Text styles and the fluid root used by both native and Element Plus controls.
+    --app-font-size-root: clamp(0.9375rem, 0.8125rem + 0.2083vw, 1.125rem);
+    --app-font-size-fine: 0.6875rem;
+    --app-font-size-caption: 0.75rem;
+    --app-font-size-small: 0.8125rem;
+    --app-font-size-body: 0.875rem;
+    --app-font-size-subheading: 0.9375rem;
+    --app-font-size-base: 1rem;
+    --app-font-size-brand: 1.0625rem;
+    --app-font-size-heading: 1.125rem;
+    --app-font-size-title: 1.25rem;
+    --app-font-size-display: 1.5rem;
+    --app-font-size-page-title: 1.75rem;
+    --app-font-size-auth-title: clamp(2rem, 1.5rem + 1.5vw, 2.625rem);
+    --app-font-weight-regular: 400;
+    --app-font-weight-medium: 500;
+    --app-font-weight-semibold: 600;
+    --app-font-weight-strong: 650;
+
+    // Shared spacing steps are named by their size at a 16px root.
+    --app-space-2: 0.125rem;
+    --app-space-4: 0.25rem;
+    --app-space-6: 0.375rem;
+    --app-space-8: 0.5rem;
+    --app-space-10: 0.625rem;
+    --app-space-12: 0.75rem;
+    --app-space-14: 0.875rem;
+    --app-space-16: 1rem;
+    --app-space-18: 1.125rem;
+    --app-space-20: 1.25rem;
+    --app-space-24: 1.5rem;
+    --app-space-32: 2rem;
+
+    --app-border-width: 1px;
+    --app-border-width-strong: 2px;
+    --app-border-width-accent: 3px;
+    --app-icon-stroke-selected: 2.5;
+    --app-border-width-glass: 0.0625rem;
+    --app-focus-width: var(--app-border-width-strong);
+    --app-focus-offset: 2px;
+
+    // Fixed details keep their physical dimensions; larger form surfaces scale with text.
+    --app-radius-grip: 2px;
+    --app-radius-tight: 4px;
+    --app-radius-small: 6px;
+    --app-radius-medium: 8px;
+    --app-radius-nav-item: 10px;
+    --app-radius-nav: 14px;
+    --app-radius-sheet: 16px;
+    --app-radius-tab-lens: 24px;
+    --app-radius-tab-bar: 28px;
+    --app-radius-segment: 0.6875rem;
+    --app-radius-tool: 0.75rem;
+    --app-radius-inset: 0.875rem;
+    --app-radius-group: 1rem;
+    --app-radius-auth-panel: 1.375rem;
+    --app-radius-brand-tile: 1.625rem;
+    --app-radius-circle: 50%;
+    // Controls, content cards and shell panes share a nested radius scale.
     --app-radius-mark: 0.25rem;
-    --app-radius-control: 0.5rem;
-    --app-radius-row: 0.625rem;
-    --app-radius-card: 0.875rem;
-    --app-radius-panel: 1rem;
-    --app-radius-pane: 1rem;
+    --app-radius-control: 0.375rem;
+    --app-radius-row: 0.375rem;
+    --app-radius-card: 0.75rem;
+    --app-radius-panel: var(--app-radius-card);
+    --app-radius-pane: 0.75rem;
     --app-radius-capsule: 999rem;
     --app-ease: cubic-bezier(0.22, 1, 0.36, 1);
     // Apple's spring presets sampled as linear() curves: snappy settles a
@@ -219,27 +355,49 @@ $default-palette: 'abyss';
     --app-ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
     --el-font-family: var(--app-font);
     --el-border-radius-base: var(--app-radius-control);
-    --el-border-radius-small: var(--app-radius-mark);
     --el-border-radius-round: var(--app-radius-capsule);
-    --el-border-radius-small: 4px;
-    --el-font-size-base: 0.875rem;
-    --el-component-size: 2.25rem;
+    --el-border-radius-small: var(--app-radius-tight);
+    --el-border-width: var(--app-border-width);
+    --el-font-size-extra-large: var(--app-font-size-title);
+    --el-font-size-large: var(--app-font-size-heading);
+    --el-font-size-medium: var(--app-font-size-base);
+    --el-font-size-base: var(--app-font-size-body);
+    --el-font-size-small: var(--app-font-size-small);
+    --el-font-size-extra-small: var(--app-font-size-caption);
+    --el-component-size-small: 1.5rem;
+    --el-component-size: 2rem;
     --el-component-size-large: 2.75rem;
-    --el-color-info: #5c6370;
     @include palette(map.get($palettes, $default-palette), light);
 }
 
 :root.dark {
-    --app-bg: #0b0d11;
-    --app-sidebar: #0e1015;
-    --app-surface: #12151b;
-    --app-raised: #1a1e26;
-    --app-text: #e9ecf1;
-    --app-text-secondary: #aab1bd;
-    --app-muted: #8a92a0;
-    --app-border: rgb(233 236 241 / 9%);
-    --app-border-strong: rgb(233 236 241 / 16%);
-    --app-grid: rgb(233 236 241 / 3.5%);
+    --app-art-light: #394553;
+    --app-art-mid: #293440;
+    --app-art-low: #17212b;
+    --app-art-edge: #121a23;
+    --app-art-seam: rgb(172 189 206 / 24%);
+    --app-art-highlight: rgb(208 222 235 / 26%);
+    --app-art-shadow: rgb(0 0 0 / 65%);
+    --app-art-mark-filter: grayscale(1) brightness(1.55) invert(1);
+    --app-art-mark-blend: screen;
+    --app-art-mark-opacity: 0.82;
+    --app-accent-contrast: white;
+    --app-accent-weight: 80%;
+    --app-action-tint-weight: 20%;
+    --app-bg: #101215;
+    --app-frame-end: #181a21;
+    --app-card-surface: #20242b;
+    --app-card-shadow: none;
+    --app-card-hover-shadow: none;
+    --app-sidebar: #15181c;
+    --app-surface: #{$surface-dark};
+    --app-raised: #22262b;
+    --app-text: #eceff3;
+    --app-text-secondary: #b4bec9;
+    --app-muted: #9daab7;
+    --app-border: rgb(236 239 243 / 13%);
+    --app-border-strong: rgb(236 239 243 / 23%);
+    --app-grid: rgb(236 239 243 / 4%);
     --app-danger: #ff8f84;
     --app-danger-soft: #2a1618;
     --app-danger-border: #6e3a40;
@@ -247,7 +405,6 @@ $default-palette: 'abyss';
     --app-warning: #e7b94c;
     --app-shadow: none;
     --app-chrome-shadow: 0 8px 24px rgb(0 0 0 / 40%);
-    --el-color-info: #8a92a0;
     --el-bg-color: var(--app-surface);
     --el-bg-color-page: var(--app-bg);
     --el-bg-color-overlay: var(--app-raised);
@@ -262,10 +419,30 @@ $default-palette: 'abyss';
     :root.dark[data-theme='#{$name}'] {
         @include palette($colors, dark);
     }
+    .palette-chip[data-palette='#{$name}'] {
+        @each $mode, $pair in $colors {
+            --preview-#{$mode}-primary: #{map.get($pair, primary)};
+            --preview-#{$mode}-secondary: #{map.get($pair, secondary)};
+        }
+    }
 }
 
 :root,
 :root.dark {
+    --el-color-primary: var(--app-primary);
+    @each $step in 3, 5, 7, 8, 9 {
+        $surface-weight: $step * 10%;
+        --el-color-primary-light-#{$step}: color-mix(
+            in srgb,
+            var(--app-surface) #{$surface-weight},
+            var(--app-primary)
+        );
+    }
+    --el-color-primary-dark-2: color-mix(
+        in srgb,
+        var(--app-accent-contrast) 20%,
+        var(--app-primary)
+    );
     --el-text-color-primary: var(--app-text);
     --el-text-color-regular: var(--app-text-secondary);
     --el-text-color-secondary: var(--app-muted);
@@ -285,6 +462,7 @@ $default-palette: 'abyss';
     --el-color-warning: var(--app-warning);
     --el-color-danger: var(--app-danger);
     --el-color-error: var(--app-danger);
+    --el-color-info: var(--app-muted);
     --el-mask-color: rgb(11 13 17 / 28%);
     --el-overlay-color-lighter: rgb(11 13 17 / 28%);
 }
@@ -310,9 +488,334 @@ $default-palette: 'abyss';
 
 // Glass preferences (src/theme/index.ts writes them): the tint mixes the
 // primary into the glass, the strength trades fill for blur. The materials
-// built from them live in styles/_glass.scss.
+// defined below are applied in styles/_glass.scss.
 :root {
     --glass-tint: 6%;
     --glass-opacity: 73%;
     --glass-blur: 21px;
+}
+
+// Glass surfaces, optical edges and shadows.
+
+// A light tint keeps structure readable along the strength range.
+@function glass-fill($offset, $base: var(--app-surface)) {
+    @return color-mix(
+        in srgb,
+        color-mix(
+                in srgb,
+                var(--app-primary) calc(var(--glass-tint) / 3),
+                #{$base}
+            )
+            calc(var(--glass-opacity) + #{$offset}),
+        transparent
+    );
+}
+
+:root {
+    --app-backdrop: linear-gradient(
+        125deg,
+        var(--app-bg),
+        var(--app-frame-end)
+    );
+
+    // The edge lights every pane and sheet shares.
+    --app-edge-light: rgb(255 255 255 / 95%);
+    --app-edge-shade: rgb(255 255 255 / 50%);
+    --app-edge-glow: rgb(255 255 255 / 32%);
+
+    // Chrome: between the menus' and the dialogs' glass, with a short shadow,
+    // since it rests just above the backdrop.
+    --app-pane-fill: #{glass-fill(-5%)};
+    --app-pane-face: linear-gradient(
+        to bottom,
+        rgb(255 255 255 / 18%),
+        transparent 3rem
+    );
+    --app-pane-blur: blur(var(--glass-blur));
+    --app-pane-rim: var(--app-border);
+    --app-pane-highlight: rgb(255 255 255 / 40%);
+    --app-pane-outline: rgb(18 20 24 / 7%);
+    --app-pane-drop: 0 0.25rem 1rem -0.75rem rgb(18 20 24 / 25%);
+    --app-pane-drop-raised: 0 0.5rem 1.25rem -0.5rem rgb(18 20 24 / 28%);
+
+    // The page panel: the same glass made for reading, a little denser and
+    // deeper, lit along its top edge only so every row lies on one tone.
+    --app-content-fill: #{glass-fill(3%)};
+    --app-content-face: none;
+    --app-content-blur: blur(calc(var(--glass-blur) * 0.8));
+
+    // Floating sheets: menus and popovers are regular glass, dialogs and
+    // drawers strong glass, so dense forms stay readable.
+    --app-sheet-fill: #{glass-fill(-39%)};
+    --app-sheet-fill-strong: #{glass-fill(-17%)};
+    --app-sheet-blur: blur(calc(var(--glass-blur) * 0.77)) saturate(1.8);
+    --app-sheet-blur-strong: blur(calc(var(--glass-blur) * 1.15)) saturate(1.8);
+    --app-sheet-face: linear-gradient(
+        165deg,
+        rgb(255 255 255 / 38%),
+        rgb(255 255 255 / 4%) 38%,
+        rgb(255 255 255 / 0%) 62%,
+        rgb(255 255 255 / 14%)
+    );
+    --app-sheet-rim: rgb(255 255 255 / 60%);
+    --app-sheet-outline: rgb(18 20 24 / 14%);
+    --app-sheet-drop: 0 1.5rem 3rem -1rem rgb(18 20 24 / 38%);
+    --app-sheet-drop-modal: 0 2rem 5rem -1.5rem rgb(18 20 24 / 50%);
+    // Width of the rim where the backdrop bends.
+    --app-sheet-lens: 1.25rem;
+    // Secondary text on glass is the text colour made translucent, so it
+    // takes on the backdrop and keeps its contrast.
+    --app-sheet-muted: color-mix(in srgb, var(--app-text) 68%, transparent);
+    // A modal scrim dims instead of veiling, so a sheet has something to bend.
+    --app-scrim: rgb(18 20 24 / 36%);
+    // Rows lit on glass take a translucent tint, so the glass shows through.
+    --app-glass-tint: color-mix(in srgb, var(--app-primary) 10%, transparent);
+
+    // Neutral glass for tabs and compact controls.
+    --app-button-fill: #{glass-fill(-13%)};
+    --app-button-fill-hover: #{glass-fill(1%)};
+    --app-button-fill-press: #{glass-fill(15%)};
+    --app-button-blur: blur(1rem) saturate(1.5);
+    --app-button-rim: var(--app-border);
+
+    // The pointer light: on light neutral glass a white light would vanish,
+    // so it takes the primary; dark glass and coloured pieces take white.
+    --app-light-color: var(--app-primary);
+    --app-light-hover: 0.12;
+    --app-light-press: 0.22;
+    --app-light-reach: 3rem;
+    --app-light-bloom: 5rem;
+}
+
+// Dark glass is deep and clear, of no hue of its own: a neutral graphite with
+// what lies behind it brightened, a crisp top light and deeper shadows.
+:root.dark {
+    --app-edge-light: rgb(255 255 255 / 70%);
+    --app-edge-shade: rgb(255 255 255 / 16%);
+    --app-edge-glow: rgb(255 255 255 / 8%);
+    --app-pane-fill: #{glass-fill(-5%, var(--app-raised))};
+    --app-pane-face: linear-gradient(
+        to bottom,
+        rgb(255 255 255 / 4%),
+        transparent 3rem
+    );
+    --app-pane-highlight: rgb(255 255 255 / 12%);
+    --app-pane-outline: rgb(0 0 0 / 28%);
+    --app-pane-drop: 0 0.25rem 1rem -0.75rem rgb(0 0 0 / 42%);
+    --app-pane-drop-raised: 0 0.5rem 1.25rem -0.5rem rgb(0 0 0 / 58%);
+    --app-sheet-fill: #{glass-fill(-23%, var(--app-raised))};
+    --app-sheet-fill-strong: #{glass-fill(-1%, var(--app-raised))};
+    --app-sheet-blur: blur(var(--glass-blur)) saturate(1.9) brightness(1.08);
+    --app-sheet-blur-strong: blur(calc(var(--glass-blur) * 1.35)) saturate(1.9)
+        brightness(1.06);
+    --app-sheet-face:
+        radial-gradient(
+            110% 70% at 0% 0%,
+            rgb(255 255 255 / 16%),
+            rgb(255 255 255 / 0%) 55%
+        ),
+        linear-gradient(
+            165deg,
+            rgb(255 255 255 / 10%),
+            rgb(255 255 255 / 2%) 36%,
+            rgb(255 255 255 / 0%) 60%,
+            rgb(255 255 255 / 6%)
+        );
+    --app-sheet-rim: rgb(255 255 255 / 16%);
+    --app-sheet-outline: rgb(0 0 0 / 70%);
+    --app-sheet-drop: 0 1.5rem 3.5rem -1rem rgb(0 0 0 / 85%);
+    --app-sheet-drop-modal: 0 2rem 5rem -1.5rem rgb(0 0 0 / 90%);
+    --app-sheet-muted: color-mix(in srgb, var(--app-text) 80%, transparent);
+    --app-scrim: rgb(0 0 0 / 55%);
+    --app-glass-tint: color-mix(in srgb, var(--app-primary) 18%, transparent);
+    --app-button-fill: rgb(255 255 255 / 7%);
+    --app-button-fill-hover: rgb(255 255 255 / 12%);
+    --app-button-fill-press: rgb(255 255 255 / 20%);
+    --app-light-color: #fff;
+    --app-light-hover: 0.1;
+    --app-light-press: 0.2;
+}
+
+// The edge-light shadows, composed once from the tokens above.
+:root,
+:root.dark {
+    --app-pane-shadow:
+        inset 0 var(--app-border-width-glass) 0 var(--app-pane-highlight),
+        0 0 0 var(--app-border-width-glass) var(--app-pane-outline),
+        var(--app-pane-drop);
+    --app-pane-shadow-raised:
+        inset 0 var(--app-border-width-glass) 0 var(--app-pane-highlight),
+        0 0 0 var(--app-border-width-glass) var(--app-pane-outline),
+        var(--app-pane-drop-raised);
+    --app-sheet-shadow:
+        inset 0.09375rem 0.09375rem 0 -0.03125rem var(--app-edge-light),
+        inset -0.09375rem -0.09375rem 0 -0.03125rem var(--app-edge-shade),
+        inset 0 0 1.5rem var(--app-edge-glow),
+        0 0 0 var(--app-border-width-glass) var(--app-sheet-outline),
+        var(--app-sheet-drop);
+    --app-sheet-shadow-modal:
+        inset 0.09375rem 0.09375rem 0 -0.03125rem var(--app-edge-light),
+        inset -0.09375rem -0.09375rem 0 -0.03125rem var(--app-edge-shade),
+        inset 0 0 1.5rem var(--app-edge-glow),
+        0 0 0 var(--app-border-width-glass) var(--app-sheet-outline),
+        var(--app-sheet-drop-modal);
+    --app-light: radial-gradient(
+        circle var(--app-light-radius) at var(--app-light-x, 50%)
+            var(--app-light-y, 0%),
+        color-mix(
+            in srgb,
+            var(--app-light-color) calc(var(--app-light-alpha) * 100%),
+            transparent
+        ),
+        transparent
+    );
+}
+
+// The rim bends only where the browser draws the lens and nothing asks for
+// less (Apple: Reduce Motion lowers the intensity of the effects).
+@media (prefers-reduced-transparency: no-preference) and (prefers-contrast: no-preference) and (prefers-reduced-motion: no-preference) {
+    :root[data-glass-lens]:not([data-reduced-motion='true']) {
+        --app-sheet-rim-lens: url('#veilpost-sheet-lens');
+    }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    :root,
+    :root.dark {
+        --app-pane-fill: var(--app-surface);
+        --app-pane-face: none;
+        --app-pane-blur: none;
+        --app-pane-rim: var(--app-border);
+        --app-pane-highlight: transparent;
+        --app-content-fill: var(--app-surface);
+        --app-content-face: none;
+        --app-content-blur: none;
+        --app-sheet-fill: var(--app-surface);
+        --app-sheet-fill-strong: var(--app-surface);
+        --app-sheet-face: none;
+        --app-sheet-blur: none;
+        --app-sheet-blur-strong: none;
+        --app-sheet-muted: var(--app-muted);
+        --app-edge-glow: transparent;
+        --app-scrim: rgb(18 20 24 / 50%);
+        --app-button-fill: var(--app-surface);
+        --app-button-fill-hover: var(--app-raised);
+        --app-button-fill-press: var(--app-raised);
+        --app-button-blur: none;
+        --app-button-rim: var(--app-border-strong);
+        --app-glass-tint: var(--app-primary-soft);
+    }
+}
+@media (prefers-contrast: more) {
+    :root,
+    :root.dark {
+        --app-backdrop: var(--app-bg);
+        --app-card-border: var(--app-border-strong);
+        --app-pane-fill: var(--app-surface);
+        --app-pane-face: none;
+        --app-pane-blur: none;
+        --app-pane-rim: var(--app-muted);
+        --app-pane-highlight: transparent;
+        --app-pane-outline: var(--app-text);
+        --app-content-fill: var(--app-surface);
+        --app-content-face: none;
+        --app-content-blur: none;
+        --app-sheet-fill: var(--app-surface);
+        --app-sheet-fill-strong: var(--app-surface);
+        --app-sheet-face: none;
+        --app-sheet-blur: none;
+        --app-sheet-blur-strong: none;
+        --app-sheet-rim: var(--app-muted);
+        --app-sheet-outline: var(--app-text);
+        --app-sheet-muted: var(--app-muted);
+        --app-light-hover: 0;
+        --app-light-press: 0;
+        --app-button-fill: var(--app-surface);
+        --app-button-fill-hover: var(--app-raised);
+        --app-button-fill-press: var(--app-raised);
+        --app-button-blur: none;
+        --app-button-rim: color-mix(in srgb, var(--app-text) 40%, transparent);
+    }
+}
+
+@media (prefers-contrast: more) {
+    :root {
+        --app-action-border: var(--app-text);
+        --app-grid: transparent;
+        --app-muted: #3d424b;
+        --app-border: rgb(18 20 24 / 45%);
+        --app-border-strong: rgb(18 20 24 / 60%);
+    }
+    :root.dark {
+        --app-grid: transparent;
+        --app-muted: #d5d8df;
+        --app-border: rgb(233 236 241 / 45%);
+        --app-border-strong: rgb(233 236 241 / 60%);
+    }
+}
+
+// Resolve these recipes on the element: button accents and lens lift are local state.
+:root :is(.el-button:not(.is-text, .is-link), .app-manage-link) {
+    --app-action-accent: var(--app-primary);
+    --app-action-fill: color-mix(
+        in srgb,
+        var(--app-action-accent) var(--app-action-tint-weight),
+        var(--app-surface)
+    );
+    --app-action-ink: color-mix(
+        in srgb,
+        var(--app-action-accent) var(--app-action-ink-weight),
+        var(--app-text)
+    );
+    --app-action-hover: color-mix(
+        in srgb,
+        var(--app-action-fill),
+        var(--app-action-ink) 8%
+    );
+    --app-action-press: color-mix(
+        in srgb,
+        var(--app-action-fill),
+        var(--app-action-ink) 15%
+    );
+    --app-action-disabled-fill: color-mix(
+        in srgb,
+        var(--app-action-fill) 44%,
+        var(--app-surface)
+    );
+    @each $type in success, warning, danger, info {
+        &:where(.el-button--#{$type}) {
+            --app-action-accent: var(--el-color-#{$type});
+        }
+    }
+}
+
+:root
+    .auth-card
+    .form-submit.el-button--primary:not(:disabled, .is-disabled, .is-loading) {
+    --app-action-fill: var(--app-primary);
+    --app-action-ink: var(--app-on-primary);
+    --app-action-hover: color-mix(in srgb, var(--app-primary), white 8%);
+    --app-action-press: color-mix(in srgb, var(--app-primary), white 20%);
+}
+
+.tab-lens {
+    --app-lens-fill: color-mix(
+        in srgb,
+        var(--app-primary) calc(6% + var(--lens-lift, 0) * 6%),
+        rgb(255 255 255 / calc(14% + var(--lens-lift, 0) * 10%))
+    );
+    --app-lens-shadow:
+        inset 0 1px 1px var(--app-edge-light),
+        inset 0 -1px 1px var(--app-edge-shade),
+        0 calc(2px + var(--lens-lift, 0) * 10px)
+            calc(6px + var(--lens-lift, 0) * 18px)
+            rgb(18 20 24 / calc(8% + var(--lens-lift, 0) * 10%));
+}
+
+:root.dark .tab-lens {
+    --app-lens-fill: color-mix(
+        in srgb,
+        var(--app-primary) calc(10% + var(--lens-lift, 0) * 8%),
+        rgb(255 255 255 / calc(6% + var(--lens-lift, 0) * 8%))
+    );
 }

@@ -127,37 +127,66 @@ test('system preferences react to changes and invalid stored values recover', as
 test('all pages fit the viewport and both color modes render', async ({
     page,
 }, testInfo) => {
-    // Sixteen full-page captures of every palette in both modes.
     test.slow()
-    for (const route of [
-        '/',
-        '/nodes',
-        '/settings/security',
-        '/settings/appearance',
-    ]) {
-        await page.goto(route)
-        const titles: Record<string, string> = {
-            '/': '网络概览',
-            '/nodes': 'VPN 节点',
-            '/settings/security': '账号安全',
-            '/settings/appearance': '偏好设置',
-        }
+    if (testInfo.project.name === 'desktop') {
+        await page.setViewportSize({ width: 1920, height: 900 })
+    }
+    const routes = [
+        ['overview', '/', '网络概览'],
+        ['nodes', '/nodes', 'VPN 节点'],
+        ['store', '/store', '软件商店'],
+        ['app-guidance', '/apps/not-in-catalog', '软件目录中没有这个软件'],
+        ['certificates', '/certificates', '证书'],
+        ['dns', '/dns-providers', 'DNS 服务商'],
+        ['security', '/settings/security', '账号安全'],
+        ['not-found', '/not-a-real-route', '这个页面不存在'],
+        ['appearance', '/settings/appearance', '偏好设置'],
+    ] as const
+    for (const [name, path, title] of routes) {
+        await page.goto(path)
         await expect(
-            page.getByRole('heading', { name: titles[route], exact: true }),
+            page.getByRole('heading', { level: 1, name: title, exact: true }),
         ).toBeVisible()
-        expect(
-            await page.evaluate(
-                () => document.documentElement.scrollWidth <= window.innerWidth,
-            ),
-        ).toBe(true)
+        await expect(page.locator('#main-content')).toHaveAttribute(
+            'aria-busy',
+            'false',
+        )
+        if (path === '/') {
+            const links = page.locator('.stat-row').getByRole('link')
+            await expect(links).toHaveCount(4)
+            expect(
+                await links.evaluateAll((items) =>
+                    items.map((item) => item.getAttribute('href')),
+                ),
+            ).toEqual([
+                '/nodes',
+                '/store',
+                '/certificates',
+                '/settings/security',
+            ])
+        }
+        for (const colorScheme of ['light', 'dark'] as const) {
+            await page.emulateMedia({ colorScheme })
+            await expect(page.locator('html')).toHaveCSS(
+                'color-scheme',
+                colorScheme,
+            )
+            expect(
+                await page.evaluate(
+                    () => document.documentElement.scrollWidth <= innerWidth,
+                ),
+            ).toBe(true)
+            await page.screenshot({
+                path: testInfo.outputPath(`${name}-${colorScheme}.png`),
+                animations: 'disabled',
+            })
+        }
     }
     for (const name of [
+        '实验室绿',
         '深海蓝',
         '晴空蓝',
-        '翡翠绿',
-        '雾海青',
         '琥珀橙',
-        '珊瑚橙',
         '玫瑰红',
         '电光紫',
     ]) {
@@ -170,17 +199,6 @@ test('all pages fit the viewport and both color modes render', async ({
             await expect(
                 page.getByRole('radio', { name: mode, exact: true }),
             ).toBeChecked()
-            await page.screenshot({
-                path: testInfo.outputPath(`${name}-${mode}.png`),
-                fullPage: true,
-                animations: 'disabled',
-            })
         }
     }
-    await page.goto('/')
-    await page.screenshot({
-        path: testInfo.outputPath('overview.png'),
-        fullPage: true,
-        animations: 'disabled',
-    })
 })

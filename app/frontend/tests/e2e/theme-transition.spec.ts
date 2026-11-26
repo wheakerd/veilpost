@@ -1,83 +1,44 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
 import { test, signIn } from './real-auth'
-
-// The circular light/dark switch (src/theme/index.ts): the dark view spreads
-// out of the pressed point and gathers back into it on the way to light.
-
-interface SwitchAnimation {
-    pseudoElement: string
-    // The clip-path keyframes, empty for animations that do not clip.
-    clipPath: string[]
-    // Set for CSS animations, such as the default cross-fade.
-    cssName: string | null
-}
 
 declare global {
     interface Window {
-        switchAnimations?: SwitchAnimation[]
-        switchAnimationObjects?: Animation[]
+        appearanceIconAnimations?: Animation[]
     }
 }
 
-// Samples the view-transition animations every frame from now on, so a
-// 560 ms circle cannot slip between two polls.
-async function recordSwitchAnimations(page: Page) {
+// Hold the feedback in place to check that it never blocks another input.
+async function recordIconAnimations(page: Page) {
     await page.evaluate(() => {
-        const found: SwitchAnimation[] = []
-        const objects: Animation[] = []
-        window.switchAnimations = found
-        window.switchAnimationObjects = objects
-        const sample = () => {
-            for (const animation of document.documentElement.getAnimations({
-                subtree: true,
-            })) {
-                const effect = animation.effect
-                if (
-                    objects.includes(animation) ||
-                    !(effect instanceof KeyframeEffect) ||
-                    !effect.pseudoElement?.startsWith('::view-transition')
-                )
-                    continue
-                objects.push(animation)
-                found.push({
-                    pseudoElement: effect.pseudoElement,
-                    clipPath: effect
-                        .getKeyframes()
-                        .map((frame) => frame.clipPath)
-                        .filter((value) => typeof value === 'string'),
-                    cssName:
-                        animation instanceof CSSAnimation
-                            ? animation.animationName
-                            : null,
-                })
+        const recorded: Animation[] = []
+        window.appearanceIconAnimations = recorded
+        const animate = Reflect.get(SVGElement.prototype, 'animate')
+        SVGElement.prototype.animate = function (
+            this: SVGElement,
+            ...args: Parameters<SVGElement['animate']>
+        ) {
+            const animation = animate.call(this, ...args)
+            if (
+                this.closest('button')
+                    ?.getAttribute('aria-label')
+                    ?.startsWith('界面外观：')
+            ) {
+                recorded.push(animation)
+                animation.pause()
             }
-            requestAnimationFrame(sample)
+            return animation
         }
-        sample()
     })
-    return {
-        list: () => page.evaluate(() => window.switchAnimations ?? []),
-        // Whether every recorded animation has stopped (finished, or
-        // cancelled once the transition settled).
-        settled: () =>
-            page.evaluate(() =>
-                (window.switchAnimationObjects ?? []).every(
-                    (animation) => animation.playState !== 'running',
-                ),
+    return () =>
+        page.evaluate(() =>
+            (window.appearanceIconAnimations ?? []).map(
+                (animation) => animation.effect?.getTiming().duration,
             ),
-    }
+        )
 }
 
-const circles = (animations: SwitchAnimation[]) =>
-    animations.filter((animation) => animation.clipPath.length > 0)
-
-// circle(<radius>px at <x>px <y>px) as numbers.
-function parseCircle(value: string | undefined) {
-    const numbers = (value ?? '').match(/-?\d+(?:\.\d+)?/g)?.map(Number)
-    expect(numbers, `clip-path ${value ?? 'missing'}`).toHaveLength(3)
-    const [radius = 0, x = 0, y = 0] = numbers ?? []
-    return { radius, x, y }
-}
+const modeButton = (page: Page) =>
+    page.getByRole('button', { name: /^界面外观：/ })
 
 test.beforeEach(async ({ page, account }) => {
     await signIn(page, account)
@@ -87,136 +48,94 @@ test.beforeEach(async ({ page, account }) => {
     })
 })
 
-const modeButton = (page: Page) =>
-    page.getByRole('button', { name: /^界面外观：/ })
-
-test('dark spreads out of the pressed point and light gathers back into it', async ({
+test('appearance controls expand and contract the dark layer and accept a second press', async ({
     page,
-}) => {
-    const errors: string[] = []
-    page.on('pageerror', (error) => errors.push(error.message))
-    await page.goto('/')
-    const html = page.locator('html')
+}, testInfo) => {
+    await page.goto('/settings/appearance')
     const mode = modeButton(page)
-    await expect(mode).toHaveAccessibleName('界面外观：浅色')
-    await expect(html).not.toHaveClass(/dark/)
-
-    const recorder = await recordSwitchAnimations(page)
-    const box = await mode.boundingBox()
-    expect(box).not.toBeNull()
-    const pressX = box!.x + box!.width / 2
-    const pressY = box!.y + box!.height / 2
-    const viewport = page.viewportSize()!
-
-    // The first click switches from system light to dark and expands the circle.
-    await mode.click()
-    await expect(mode).toHaveAccessibleName('界面外观：深色')
-    await expect(html).toHaveClass(/dark/)
-    await expect
-        .poll(async () => circles(await recorder.list()))
-        .toHaveLength(1)
-    const [expand] = circles(await recorder.list())
-    expect(expand?.pseudoElement).toBe('::view-transition-new(root)')
-    const from = parseCircle(expand?.clipPath[0])
-    const to = parseCircle(expand?.clipPath.at(-1))
-    expect(from.radius).toBe(0)
-    expect(Math.abs(from.x - pressX)).toBeLessThan(2)
-    expect(Math.abs(from.y - pressY)).toBeLessThan(2)
-    expect(to.x).toBe(from.x)
-    expect(to.y).toBe(from.y)
-    const farthest = Math.hypot(
-        Math.max(pressX, viewport.width - pressX),
-        Math.max(pressY, viewport.height - pressY),
-    )
-    expect(to.radius).toBeGreaterThanOrEqual(farthest - 2)
-    await expect.poll(recorder.settled).toBe(true)
-
-    // Dark to light: the old dark view shrinks into the button.
-    await mode.click()
-    await expect(mode).toHaveAccessibleName('界面外观：浅色')
-    await expect(html).not.toHaveClass(/dark/)
-    await expect
-        .poll(async () => circles(await recorder.list()))
-        .toHaveLength(2)
-    const contract = circles(await recorder.list())[1]
-    expect(contract?.pseudoElement).toBe('::view-transition-old(root)')
-    expect(parseCircle(contract?.clipPath[0]).radius).toBeGreaterThanOrEqual(
-        farthest - 2,
-    )
-    const end = parseCircle(contract?.clipPath.at(-1))
-    expect(end.radius).toBe(0)
-    expect(Math.abs(end.x - pressX)).toBeLessThan(2)
-    expect(Math.abs(end.y - pressY)).toBeLessThan(2)
-    await expect.poll(recorder.settled).toBe(true)
-
-    // The circle replaces the default cross-fade of the root snapshots.
-    const fades = (await recorder.list()).filter(
-        (animation) =>
-            animation.cssName !== null &&
-            /^::view-transition-(old|new)\(root\)$/.test(
-                animation.pseudoElement,
-            ),
-    )
-    expect(fades).toEqual([])
-    await expect(html).not.toHaveClass(/theme-(expand|contract)/)
-    expect(errors).toEqual([])
-})
-
-test('a switch during a running one settles on the latest mode without errors', async ({
-    page,
-}) => {
-    const errors: string[] = []
-    page.on('pageerror', (error) => errors.push(error.message))
-    await page.goto('/')
+    const press = (control: Locator) =>
+        testInfo.project.use.hasTouch ? control.tap() : control.click()
     const html = page.locator('html')
-    const mode = modeButton(page)
-    await expect(mode).toHaveAccessibleName('界面外观：浅色')
-    const recorder = await recordSwitchAnimations(page)
-    // Switch to dark, then back to light without waiting for the circle.
-    await mode.focus()
-    await page.keyboard.press('Enter')
-    await page.keyboard.press('Enter')
-    await expect(mode).toHaveAccessibleName('界面外观：浅色')
-    await expect(html).not.toHaveClass(/dark/)
-    await expect.poll(recorder.settled).toBe(true)
-    await expect(html).not.toHaveClass(/dark/)
-    await expect(html).not.toHaveClass(/theme-(expand|contract)/)
-    // A keyboard switch starts from the button, not from a stale press.
-    const box = (await mode.boundingBox())!
-    for (const animation of circles(await recorder.list())) {
-        const point = parseCircle(
-            animation.pseudoElement === '::view-transition-new(root)'
-                ? animation.clipPath[0]
-                : animation.clipPath.at(-1),
-        )
-        expect(Math.abs(point.x - (box.x + box.width / 2))).toBeLessThan(2)
-        expect(Math.abs(point.y - (box.y + box.height / 2))).toBeLessThan(2)
+    const recorded = await recordIconAnimations(page)
+    const history = await page.evaluateHandle(() => {
+        const circles: {
+            layer: string
+            direction: string
+            duration: string
+        }[] = []
+        document.addEventListener('animationstart', (event) => {
+            if (event.animationName !== 'appearance-reveal') return
+            const style = getComputedStyle(
+                document.documentElement,
+                event.pseudoElement,
+            )
+            circles.push({
+                layer: event.pseudoElement,
+                direction: style.animationDirection,
+                duration: style.animationDuration,
+            })
+        })
+        return circles
+    })
+    const circles = () => history.jsonValue()
+    const expand = {
+        layer: '::view-transition-new(root)',
+        direction: 'normal',
+        duration: '0.59s',
     }
-    expect(errors).toEqual([])
+    const contract = {
+        layer: '::view-transition-old(root)',
+        direction: 'reverse',
+        duration: '0.59s',
+    }
+    await press(mode)
+    await expect(html).toHaveClass(/dark/)
+    await expect.poll(recorded).toEqual([150])
+    await expect.poll(circles).toEqual([expand])
+
+    await press(mode)
+    await expect(html).not.toHaveClass(/dark/)
+    await expect.poll(recorded).toEqual([150, 150])
+    await expect.poll(circles).toEqual([expand, contract])
+
+    const appearance = page.getByRole('radiogroup', { name: '界面外观' })
+    await press(appearance.getByText('深色', { exact: true }))
+    await expect.poll(circles).toEqual([expand, contract, expand])
+    await press(appearance.getByText('跟随系统', { exact: true }))
+    await expect.poll(circles).toEqual([expand, contract, expand, contract])
+    await expect(html).not.toHaveClass(/dark|appearance-reveal/)
 })
 
-test('the system reduced-motion setting switches instantly without a circle', async ({
+test('system changes and keyboard switching update the mode without icon motion', async ({
+    page,
+}) => {
+    await page.goto('/')
+    const html = page.locator('html')
+    const mode = modeButton(page)
+    const recorded = await recordIconAnimations(page)
+    await page.emulateMedia({ colorScheme: 'dark' })
+    await expect(html).toHaveClass(/dark/)
+
+    await mode.press('Enter')
+    await expect(html).not.toHaveClass(/dark/)
+    await mode.press('Space')
+    await expect(html).toHaveClass(/dark/)
+    expect(await recorded()).toEqual([])
+})
+
+test('system reduced motion suppresses appearance icon feedback', async ({
     page,
 }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.goto('/')
-    const html = page.locator('html')
-    const mode = modeButton(page)
-    const recorder = await recordSwitchAnimations(page)
-    await expect(mode).toHaveAccessibleName('界面外观：浅色')
-    await mode.click()
-    // The class changes in the same task as the click; no transition defers it.
-    expect(
-        await page.evaluate(() =>
-            document.documentElement.classList.contains('dark'),
-        ),
-    ).toBe(true)
-    await mode.click()
-    await expect(html).not.toHaveClass(/dark/)
-    expect(await recorder.list()).toEqual([])
+    const recorded = await recordIconAnimations(page)
+    await modeButton(page).click()
+    await expect(page.locator('html')).toHaveClass(/dark/)
+    await expect(page.locator('html')).not.toHaveClass(/appearance-reveal/)
+    expect(await recorded()).toEqual([])
 })
 
-test('the reduced-motion preference switches instantly without a circle', async ({
+test('the reduced-motion preference suppresses appearance icon feedback', async ({
     page,
 }) => {
     await page.goto('/settings/appearance')
@@ -225,17 +144,12 @@ test('the reduced-motion preference switches instantly without a circle', async 
         'data-reduced-motion',
         'true',
     )
-    const html = page.locator('html')
-    const recorder = await recordSwitchAnimations(page)
-    await page
-        .getByRole('radiogroup', { name: '界面外观' })
-        .getByText('深色', { exact: true })
-        .click()
-    await expect(html).toHaveClass(/dark/)
-    await page
-        .getByRole('radiogroup', { name: '界面外观' })
-        .getByText('浅色', { exact: true })
-        .click()
-    await expect(html).not.toHaveClass(/dark/)
-    expect(await recorder.list()).toEqual([])
+    const recorded = await recordIconAnimations(page)
+    const appearance = page.getByRole('radiogroup', { name: '界面外观' })
+    await appearance.getByText('深色', { exact: true }).click()
+    await expect(page.locator('html')).toHaveClass(/dark/)
+    await modeButton(page).click()
+    await expect(page.locator('html')).not.toHaveClass(/dark/)
+    await expect(page.locator('html')).not.toHaveClass(/appearance-reveal/)
+    expect(await recorded()).toEqual([])
 })

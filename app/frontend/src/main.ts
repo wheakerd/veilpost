@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+import { createApp, watch } from 'vue'
 import { createPinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import App from './App.vue'
@@ -13,13 +13,13 @@ import { installGlassLight, installSheetLens } from './theme/liquidGlass'
 import 'element-plus/theme-chalk/base.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import './styles/index.scss'
+import './styles/_records.scss'
 import './styles/_auth.scss'
 import './styles/_apps.scss'
 import './styles/_preferences.scss'
 import './styles/_glass.scss'
 import './styles/_type.scss'
 import './styles/_palettes.scss'
-import './styles/_theme-transition.scss'
 
 migrateLegacyPreferences(() => window.localStorage)
 const app = createApp(App)
@@ -30,7 +30,18 @@ const preferences = usePreferencesStore(pinia)
 installTheme(preferences)
 installLocale(preferences)
 app.use(i18n)
+document
+    .getElementById('boot-caption')
+    ?.replaceChildren(i18n.global.t('common.loading.title'))
+// A committed route has finished its guards, redirects, and lazy imports.
+watch(
+    router.currentRoute,
+    async () => {
+        await window.veilpostBootMinimum
+        app.mount('#root')
+    },
+    { once: true },
+)
 app.use(router)
 installGlassLight()
 installSheetLens()
-app.mount('#root')

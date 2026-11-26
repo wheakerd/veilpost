@@ -5,6 +5,7 @@ import {
     h,
     nextTick,
     onActivated,
+    onDeactivated,
     onMounted,
     reactive,
     ref,
@@ -26,14 +27,25 @@ const preferences = usePreferencesStore()
 const tabs = useTabsStore()
 const { reduceMotion, transition } = useInterfaceMotion()
 
-const rest = { opacity: 1, x: 0, y: 0, scale: 1 }
-
 function enter(element: HTMLElement | null) {
-    if (!element || reduceMotion.value) return
+    if (!element || route.meta.authPage || reduceMotion.value) return
+    if (preferences.pageTransition === 'fade')
+        return animate(
+            element,
+            { opacity: [0, 1] },
+            { duration: 0.28, ease: 'easeOut' },
+        )
     const from = pageEnter[preferences.pageTransition]
-    // Start from the offset and spring to rest; nothing waits for it.
-    animate(element, { ...rest, ...from }, { duration: 0 })
-    animate(element, rest, transition.value)
+    return animate(
+        element,
+        {
+            opacity: [0.42, 1],
+            x: [from.x ?? 0, 0],
+            y: [from.y ?? 0, 0],
+            scale: [from.scale ?? 1, 1],
+        },
+        transition.value,
+    )
 }
 
 // One wrapper per path, named after it, so KeepAlive can drop exactly the
@@ -46,12 +58,18 @@ function wrapper(path: string) {
             name: `page:${path}`,
             setup(_, { slots }) {
                 const element = ref<HTMLElement | null>(null)
+                let wasDeactivated = false
+                let entrance: ReturnType<typeof enter>
                 onMounted(() => {
                     pageScroll.delete(path)
-                    enter(element.value)
+                    entrance = enter(element.value)
                 })
                 onActivated(() => {
-                    enter(element.value)
+                    if (wasDeactivated) entrance = enter(element.value)
+                })
+                onDeactivated(() => {
+                    wasDeactivated = true
+                    entrance?.complete()
                 })
                 return () =>
                     h(

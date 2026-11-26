@@ -1,14 +1,8 @@
 // Liquid glass for the whole console, after the Liquid Glass of iOS 26 and
 // macOS 26.
 //
-// The workspace stands on a backdrop like a desktop picture: soft, still
-// fields of the palette's primary and secondary over the page colour. The
-// chrome (sidebar, top bar, tab bar) and the page panel are panes of glass
-// resting just above it, with a gap between them, so every region gathers the
-// backdrop's colour. What floats above the content (menus, popovers, drawers,
-// dialogs, messages) is clearer glass that refracts along its rim. Buttons are
-// solid tinted capsules with a spring press. Panels and cards use hairline
-// frames on the page panel, so glass never stacks on glass.
+// Glass panes frame the workspace. Content cards use solid surfaces, while
+// floating menus, drawers and dialogs retain a translucent material.
 //
 // Glass is drawn by its edge, not by a frosted fill: a specular light along
 // the upper left edge, a fainter one along the lower right, light scattered
@@ -20,8 +14,6 @@
 // every fill, --glass-opacity sets how solid it is and --glass-blur how deep.
 // Reduced transparency turns every pane solid; more contrast also gives it a
 // defined border and a plain backdrop.
-
-$px: 0.0625rem;
 
 // The pointer light's strength and reach are registered, so the light fades
 // and blooms instead of switching.
@@ -36,312 +28,6 @@ $px: 0.0625rem;
     initial-value: 48px;
 }
 
-// ---- Tokens -------------------------------------------------------------
-
-// A fill of the glass base colour, tinted by the primary, at an opacity
-// offset from the strength preference.
-@function glass-fill($offset, $base: #fff) {
-    @return color-mix(
-        in srgb,
-        color-mix(in srgb, var(--app-primary) var(--glass-tint), #{$base})
-            calc(var(--glass-opacity) + #{$offset}),
-        transparent
-    );
-}
-
-:root {
-    --app-backdrop:
-        radial-gradient(
-            55% 75% at 0% 0%,
-            color-mix(in srgb, var(--app-primary) 10%, transparent),
-            transparent
-        ),
-        radial-gradient(
-            45% 70% at 0% 100%,
-            color-mix(in srgb, var(--app-secondary) 6%, transparent),
-            transparent
-        ),
-        radial-gradient(
-            45% 60% at 100% 0%,
-            color-mix(in srgb, var(--app-secondary) 4%, transparent),
-            transparent
-        ),
-        radial-gradient(
-            60% 60% at 100% 100%,
-            color-mix(in srgb, var(--app-primary) 5%, transparent),
-            transparent
-        ),
-        var(--app-bg);
-
-    // The edge lights every pane and sheet shares.
-    --app-edge-light: rgb(255 255 255 / 95%);
-    --app-edge-shade: rgb(255 255 255 / 50%);
-    --app-edge-glow: rgb(255 255 255 / 32%);
-
-    // Chrome: between the menus' and the dialogs' glass, with a short shadow,
-    // since it rests just above the backdrop.
-    --app-pane-fill: #{glass-fill(-13%)};
-    --app-pane-face: linear-gradient(
-        165deg,
-        rgb(255 255 255 / 34%),
-        rgb(255 255 255 / 0%) 42%
-    );
-    --app-pane-blur: blur(var(--glass-blur)) saturate(1.8);
-    --app-pane-rim: rgb(255 255 255 / 72%);
-    --app-pane-outline: rgb(18 20 24 / 7%);
-    --app-pane-drop: 0 0.75rem 2rem -1.5rem rgb(18 20 24 / 30%);
-    --app-pane-drop-raised: 0 1rem 2.5rem -1.25rem rgb(18 20 24 / 42%);
-
-    // The page panel: the same glass made for reading, a little denser and
-    // deeper, lit along its top edge only so every row lies on one tone.
-    --app-content-fill: #{glass-fill(-7%)};
-    --app-content-face: linear-gradient(
-        170deg,
-        rgb(255 255 255 / 30%),
-        rgb(255 255 255 / 0%) 5rem
-    );
-    --app-content-blur: blur(calc(var(--glass-blur) * 1.15)) saturate(1.8);
-
-    // Floating sheets: menus and popovers are regular glass, dialogs and
-    // drawers strong glass, so dense forms stay readable.
-    --app-sheet-fill: #{glass-fill(-39%)};
-    --app-sheet-fill-strong: #{glass-fill(-17%)};
-    --app-sheet-blur: blur(calc(var(--glass-blur) * 0.77)) saturate(1.8);
-    --app-sheet-blur-strong: blur(calc(var(--glass-blur) * 1.15)) saturate(1.8);
-    --app-sheet-face: linear-gradient(
-        165deg,
-        rgb(255 255 255 / 38%),
-        rgb(255 255 255 / 4%) 38%,
-        rgb(255 255 255 / 0%) 62%,
-        rgb(255 255 255 / 14%)
-    );
-    --app-sheet-rim: rgb(255 255 255 / 60%);
-    --app-sheet-outline: rgb(18 20 24 / 14%);
-    --app-sheet-drop: 0 1.5rem 3rem -1rem rgb(18 20 24 / 38%);
-    --app-sheet-drop-modal: 0 2rem 5rem -1.5rem rgb(18 20 24 / 50%);
-    // Width of the rim where the backdrop bends.
-    --app-sheet-lens: 1.25rem;
-    // Secondary text on glass is the text colour made translucent, so it
-    // takes on the backdrop and keeps its contrast.
-    --app-sheet-muted: color-mix(in srgb, var(--app-text) 68%, transparent);
-    // A modal scrim dims instead of veiling, so a sheet has something to bend.
-    --app-scrim: rgb(18 20 24 / 36%);
-    // Rows lit on glass take a translucent tint, so the glass shows through.
-    --app-glass-tint: color-mix(in srgb, var(--app-primary) 10%, transparent);
-
-    // Neutral glass for tabs and compact controls.
-    --app-button-fill: #{glass-fill(-13%)};
-    --app-button-fill-hover: #{glass-fill(1%)};
-    --app-button-fill-press: #{glass-fill(15%)};
-    --app-button-blur: blur(1rem) saturate(1.5);
-    --app-button-rim: rgb(255 255 255 / 78%);
-    --app-button-light-top: rgb(255 255 255 / 95%);
-    --app-button-light-bottom: rgb(255 255 255 / 45%);
-    --app-button-glow: rgb(255 255 255 / 22%);
-    --app-button-outline: rgb(18 20 24 / 8%);
-    --app-button-shadow-color: rgb(18 20 24 / 28%);
-
-    // The pointer light: on light neutral glass a white light would vanish,
-    // so it takes the primary; dark glass and coloured pieces take white.
-    --app-light-color: var(--app-primary);
-    --app-light-hover: 0.12;
-    --app-light-press: 0.22;
-    --app-light-reach: 3rem;
-    --app-light-bloom: 5rem;
-}
-
-// Dark glass is deep and clear, of no hue of its own: a neutral graphite with
-// what lies behind it brightened, a crisp top light and deeper shadows.
-:root.dark {
-    --app-backdrop:
-        radial-gradient(
-            55% 75% at 0% 0%,
-            color-mix(in srgb, var(--app-primary) 16%, transparent),
-            transparent
-        ),
-        radial-gradient(
-            45% 70% at 0% 100%,
-            color-mix(in srgb, var(--app-secondary) 9%, transparent),
-            transparent
-        ),
-        radial-gradient(
-            45% 60% at 100% 0%,
-            color-mix(in srgb, var(--app-secondary) 6%, transparent),
-            transparent
-        ),
-        radial-gradient(
-            60% 60% at 100% 100%,
-            color-mix(in srgb, var(--app-primary) 8%, transparent),
-            transparent
-        ),
-        var(--app-bg);
-    --app-edge-light: rgb(255 255 255 / 70%);
-    --app-edge-shade: rgb(255 255 255 / 16%);
-    --app-edge-glow: rgb(255 255 255 / 8%);
-    --app-pane-fill: #{glass-fill(-17%, #181a1f)};
-    --app-pane-face: radial-gradient(
-        120% 60% at 0% 0%,
-        rgb(255 255 255 / 9%),
-        rgb(255 255 255 / 0%) 60%
-    );
-    --app-pane-blur: blur(calc(var(--glass-blur) * 1.15)) saturate(1.8)
-        brightness(1.05);
-    --app-pane-rim: rgb(255 255 255 / 12%);
-    --app-pane-outline: rgb(0 0 0 / 55%);
-    --app-pane-drop: 0 0.75rem 2rem -1rem rgb(0 0 0 / 70%);
-    --app-pane-drop-raised: 0 1rem 2.5rem -1rem rgb(0 0 0 / 85%);
-    --app-content-fill: #{glass-fill(-11%, #181a1f)};
-    --app-content-face: linear-gradient(
-        170deg,
-        rgb(255 255 255 / 7%),
-        rgb(255 255 255 / 0%) 5rem
-    );
-    --app-content-blur: blur(calc(var(--glass-blur) * 1.35)) saturate(1.8)
-        brightness(1.05);
-    --app-sheet-fill: #{glass-fill(-23%, #1c1e24)};
-    --app-sheet-fill-strong: #{glass-fill(-1%, #1c1e24)};
-    --app-sheet-blur: blur(var(--glass-blur)) saturate(1.9) brightness(1.08);
-    --app-sheet-blur-strong: blur(calc(var(--glass-blur) * 1.35)) saturate(1.9)
-        brightness(1.06);
-    --app-sheet-face:
-        radial-gradient(
-            110% 70% at 0% 0%,
-            rgb(255 255 255 / 16%),
-            rgb(255 255 255 / 0%) 55%
-        ),
-        linear-gradient(
-            165deg,
-            rgb(255 255 255 / 10%),
-            rgb(255 255 255 / 2%) 36%,
-            rgb(255 255 255 / 0%) 60%,
-            rgb(255 255 255 / 6%)
-        );
-    --app-sheet-rim: rgb(255 255 255 / 16%);
-    --app-sheet-outline: rgb(0 0 0 / 70%);
-    --app-sheet-drop: 0 1.5rem 3.5rem -1rem rgb(0 0 0 / 85%);
-    --app-sheet-drop-modal: 0 2rem 5rem -1.5rem rgb(0 0 0 / 90%);
-    --app-sheet-muted: color-mix(in srgb, var(--app-text) 80%, transparent);
-    --app-scrim: rgb(0 0 0 / 55%);
-    --app-glass-tint: color-mix(in srgb, var(--app-primary) 18%, transparent);
-    --app-button-fill: rgb(255 255 255 / 7%);
-    --app-button-fill-hover: rgb(255 255 255 / 12%);
-    --app-button-fill-press: rgb(255 255 255 / 20%);
-    --app-button-rim: rgb(255 255 255 / 20%);
-    --app-button-light-top: rgb(255 255 255 / 72%);
-    --app-button-light-bottom: rgb(255 255 255 / 14%);
-    --app-button-glow: rgb(255 255 255 / 8%);
-    --app-button-outline: rgb(0 0 0 / 65%);
-    --app-button-shadow-color: rgb(0 0 0 / 80%);
-    --app-light-color: #fff;
-    --app-light-hover: 0.1;
-    --app-light-press: 0.2;
-}
-
-// The edge-light shadows, composed once from the tokens above.
-:root,
-:root.dark {
-    --app-pane-shadow:
-        inset 0.09375rem 0.09375rem 0 -0.03125rem var(--app-edge-light),
-        inset -0.09375rem -0.09375rem 0 -0.03125rem var(--app-edge-shade),
-        inset 0 0 1.25rem var(--app-edge-glow),
-        0 0 0 #{$px} var(--app-pane-outline), var(--app-pane-drop);
-    --app-pane-shadow-raised:
-        inset 0.09375rem 0.09375rem 0 -0.03125rem var(--app-edge-light),
-        inset -0.09375rem -0.09375rem 0 -0.03125rem var(--app-edge-shade),
-        inset 0 0 1.25rem var(--app-edge-glow),
-        0 0 0 #{$px} var(--app-pane-outline), var(--app-pane-drop-raised);
-    --app-sheet-shadow:
-        inset 0.09375rem 0.09375rem 0 -0.03125rem var(--app-edge-light),
-        inset -0.09375rem -0.09375rem 0 -0.03125rem var(--app-edge-shade),
-        inset 0 0 1.5rem var(--app-edge-glow),
-        0 0 0 #{$px} var(--app-sheet-outline), var(--app-sheet-drop);
-    --app-sheet-shadow-modal:
-        inset 0.09375rem 0.09375rem 0 -0.03125rem var(--app-edge-light),
-        inset -0.09375rem -0.09375rem 0 -0.03125rem var(--app-edge-shade),
-        inset 0 0 1.5rem var(--app-edge-glow),
-        0 0 0 #{$px} var(--app-sheet-outline), var(--app-sheet-drop-modal);
-    --app-button-shadow-rest:
-        inset 0 #{$px} 0 var(--app-button-light-top),
-        inset 0 -#{$px} 0 var(--app-button-light-bottom),
-        inset 0 0 0.75rem var(--app-button-glow),
-        0 0 0 #{$px} var(--app-button-outline),
-        0 0.375rem 1rem -0.5rem var(--app-button-shadow-color);
-    --app-light: radial-gradient(
-        circle var(--app-light-radius) at var(--app-light-x, 50%)
-            var(--app-light-y, 0%),
-        color-mix(
-            in srgb,
-            var(--app-light-color) calc(var(--app-light-alpha) * 100%),
-            transparent
-        ),
-        transparent
-    );
-}
-
-// The rim bends only where the browser draws the lens and nothing asks for
-// less (Apple: Reduce Motion lowers the intensity of the effects).
-@media (prefers-reduced-transparency: no-preference) and (prefers-contrast: no-preference) and (prefers-reduced-motion: no-preference) {
-    :root[data-glass-lens]:not([data-reduced-motion='true']) {
-        --app-sheet-rim-lens: url('#veilpost-sheet-lens');
-    }
-}
-
-@media (prefers-reduced-transparency: reduce) {
-    :root,
-    :root.dark {
-        --app-pane-fill: var(--app-surface);
-        --app-pane-face: none;
-        --app-pane-blur: none;
-        --app-pane-rim: var(--app-border);
-        --app-content-fill: var(--app-surface);
-        --app-content-face: none;
-        --app-content-blur: none;
-        --app-sheet-fill: var(--app-surface);
-        --app-sheet-fill-strong: var(--app-surface);
-        --app-sheet-face: none;
-        --app-sheet-blur: none;
-        --app-sheet-blur-strong: none;
-        --app-sheet-muted: var(--app-muted);
-        --app-edge-glow: transparent;
-        --app-scrim: rgb(18 20 24 / 50%);
-        --app-button-fill: var(--app-surface);
-        --app-button-fill-hover: var(--app-raised);
-        --app-button-fill-press: var(--app-raised);
-        --app-button-blur: none;
-        --app-button-rim: var(--app-border-strong);
-        --app-glass-tint: var(--app-primary-soft);
-    }
-}
-@media (prefers-contrast: more) {
-    :root,
-    :root.dark {
-        --app-backdrop: var(--app-bg);
-        --app-pane-fill: var(--app-surface);
-        --app-pane-face: none;
-        --app-pane-blur: none;
-        --app-pane-rim: var(--app-muted);
-        --app-pane-outline: var(--app-text);
-        --app-content-fill: var(--app-surface);
-        --app-content-face: none;
-        --app-content-blur: none;
-        --app-sheet-fill: var(--app-surface);
-        --app-sheet-fill-strong: var(--app-surface);
-        --app-sheet-face: none;
-        --app-sheet-blur: none;
-        --app-sheet-blur-strong: none;
-        --app-sheet-rim: var(--app-muted);
-        --app-sheet-outline: var(--app-text);
-        --app-sheet-muted: var(--app-muted);
-        --app-light-hover: 0;
-        --app-light-press: 0;
-        --app-button-fill: var(--app-surface);
-        --app-button-fill-hover: var(--app-raised);
-        --app-button-fill-press: var(--app-raised);
-        --app-button-blur: none;
-        --app-button-rim: color-mix(in srgb, var(--app-text) 40%, transparent);
-    }
-}
-
 // ---- Recipes ------------------------------------------------------------
 
 @mixin pane(
@@ -350,7 +36,7 @@ $px: 0.0625rem;
     $blur: var(--app-pane-blur),
     $shadow: var(--app-pane-shadow)
 ) {
-    border: $px solid var(--app-pane-rim);
+    border: var(--app-border-width-glass) solid var(--app-pane-rim);
     background-color: $fill;
     background-image: $face;
     -webkit-backdrop-filter: $blur;
@@ -368,7 +54,7 @@ $px: 0.0625rem;
 ) {
     --el-text-color-secondary: var(--app-sheet-muted);
     --el-text-color-placeholder: var(--app-sheet-muted);
-    border: $px solid var(--app-sheet-rim);
+    border: var(--app-border-width-glass) solid var(--app-sheet-rim);
     background-color: $fill;
     background-image: var(--app-sheet-face);
     -webkit-backdrop-filter: $blur;
@@ -386,17 +72,17 @@ $px: 0.0625rem;
         mask-image:
             linear-gradient(
                 to right,
-                #000,
+                var(--app-mask-opaque),
                 transparent var(--app-sheet-lens),
                 transparent calc(100% - var(--app-sheet-lens)),
-                #000
+                var(--app-mask-opaque)
             ),
             linear-gradient(
                 to bottom,
-                #000,
+                var(--app-mask-opaque),
                 transparent var(--app-sheet-lens),
                 transparent calc(100% - var(--app-sheet-lens)),
-                #000
+                var(--app-mask-opaque)
             );
     }
 }
@@ -428,29 +114,17 @@ body {
     );
     border-radius: var(--app-radius-pane);
 }
-.route-content {
-    max-width: 100rem;
+.workspace .route-content {
+    width: 100%;
+    max-width: var(--app-reading-width);
     margin-inline: auto;
-}
-// Panels and cards are hairline frames on the page panel, not glass of their
-// own; lit rows take a translucent tint.
-.plain-panel,
-.stat {
-    background: transparent;
-    box-shadow: none;
-}
-.plain-panel {
-    border-radius: var(--app-radius-card);
-}
-.stat {
-    border-radius: var(--app-radius-card);
 }
 
 @media (min-width: 47.5625rem) {
     // Every region floats half a rem from the window and from its neighbours.
     .app-shell {
-        gap: 0.5rem;
-        padding: 0.5rem;
+        gap: var(--app-space-8);
+        padding: var(--app-space-8);
         background: none;
     }
     .sidebar {
@@ -460,7 +134,7 @@ body {
         border-radius: var(--app-radius-pane);
     }
     .workspace {
-        gap: 0.5rem;
+        gap: var(--app-space-8);
     }
     .workspace > main {
         max-width: none;
@@ -478,8 +152,8 @@ body {
     &::before {
         content: '';
         position: absolute;
-        inset: auto -0.5rem calc(100% + #{$px});
-        height: calc(0.5rem + #{$px});
+        inset: auto -0.5rem calc(100% + var(--app-border-width-glass));
+        height: calc(0.5rem + var(--app-border-width-glass));
         background: var(--app-backdrop);
         background-attachment: fixed;
         pointer-events: none;
@@ -497,7 +171,7 @@ body {
 @media (max-width: 47.5rem) {
     .topbar,
     .workspace > main {
-        margin-inline: 0.5rem;
+        margin-inline: var(--app-space-8);
     }
     // Its margins sit inside the window, not beyond it.
     .workspace > main {
@@ -514,13 +188,16 @@ body {
 // and the sidebar toggle open it on the left.
 .topbar .brand {
     min-height: 0;
-    margin: 0 0.25rem 0 0;
-    padding: 0 0.25rem;
+    margin: 0 var(--app-space-4) 0 0;
+    padding: 0 var(--app-space-4);
     border-radius: var(--app-radius-control);
+    strong {
+        font-weight: var(--app-font-weight-strong);
+    }
 }
 @media (min-width: 47.5625rem) {
     .app-shell {
-        --topbar-height: 3.5rem;
+        --topbar-height: 3.75rem;
         grid-template-rows: var(--topbar-height) minmax(0, 1fr);
     }
     .app-shell > .topbar {
@@ -579,32 +256,31 @@ body {
 
 // ---- Sidebar menu (Element Plus) ----------------------------------------
 
-// The native menu, refined: groups are submenus with their own arrow, rows
-// are rounded tiles that light with a translucent tint, and the current page
-// carries the primary with a short bar on its leading edge.
+// The sidebar shares its selection color and border with the page tabs.
 .sidebar-nav {
-    margin-top: 0.25rem;
+    margin-top: var(--app-space-4);
 }
 .sidebar-menu.el-menu {
     --el-menu-bg-color: transparent;
-    --el-menu-hover-bg-color: var(--app-glass-tint);
+    --el-menu-hover-bg-color: var(--app-raised);
     --el-menu-text-color: var(--app-text-secondary);
     --el-menu-hover-text-color: var(--app-text);
-    --el-menu-active-color: var(--app-primary);
+    --el-menu-active-color: var(--app-accent-text);
     --el-menu-item-height: 2.5rem;
     --el-menu-sub-item-height: 2.5rem;
-    --el-menu-item-font-size: 0.875rem;
+    --el-menu-item-font-size: var(--app-font-size-body);
     border-right: 0;
     .el-menu {
         --el-menu-bg-color: transparent;
     }
     .el-sub-menu__title {
         height: 2rem;
-        margin-top: 0.75rem;
-        padding: 0 0.75rem !important;
+        margin-top: var(--app-space-12);
+        padding: 0 var(--app-space-12) !important;
         border-radius: var(--app-radius-row);
         color: var(--app-muted);
-        font-size: 0.75rem;
+        font-family: var(--app-font);
+        font-size: var(--app-font-size-small);
         line-height: 2rem;
         &:hover {
             color: var(--app-text);
@@ -615,8 +291,8 @@ body {
     }
     .el-sub-menu__icon-arrow {
         right: 0.75rem;
-        margin-top: -0.375rem;
-        font-size: 0.75rem;
+        margin-top: calc(-0.5 * var(--app-font-size-caption));
+        font-size: var(--app-font-size-caption);
     }
     .el-menu-item {
         position: relative;
@@ -629,28 +305,20 @@ body {
             background-color 140ms var(--app-ease),
             color 140ms var(--app-ease);
         &.is-active {
-            background: var(--app-glass-tint);
-            color: var(--app-primary);
-            font-weight: 500;
-            &::before {
-                content: '';
-                position: absolute;
-                left: 0;
-                top: 0.625rem;
-                bottom: 0.625rem;
-                width: 3px;
-                border-radius: 3px;
-                background: var(--app-primary);
-            }
+            background: var(--app-primary-soft);
+            color: var(--app-accent-text);
+            box-shadow: inset 0 0 0 var(--app-border-width)
+                var(--app-selection-border);
+            font-weight: var(--app-font-weight-medium);
         }
     }
     .menu-link {
         display: flex;
         align-items: center;
-        gap: 0.625rem;
+        gap: var(--app-space-10);
         width: 100%;
         height: 100%;
-        padding: 0 0.75rem;
+        padding: 0 var(--app-space-12);
         color: inherit;
         svg {
             flex-shrink: 0;
@@ -670,30 +338,32 @@ body {
 .account-trigger {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--app-space-8);
     height: 2.25rem;
-    padding: 0 0.875rem 0 0.25rem;
+    padding: 0 var(--app-space-14) 0 var(--app-space-4);
     border-radius: var(--app-radius-capsule);
     color: var(--app-text);
     font: inherit;
-    font-size: 0.8125rem;
+    font-size: var(--app-font-size-small);
     cursor: pointer;
     scale: 1;
     transition:
-        scale var(--app-spring-snappy-duration) var(--app-spring-snappy),
+        scale 160ms var(--app-ease),
         $light-motion;
-    &:active {
-        scale: 0.97;
-        transition-duration: 120ms, 180ms, 260ms;
+    @media (prefers-reduced-motion: no-preference) {
+        :root:not([data-reduced-motion='true']) &:active:not(:focus-visible) {
+            scale: 0.97;
+            transition-duration: 100ms, 180ms, 260ms;
+        }
     }
     &:focus-visible {
-        outline: 2px solid var(--app-primary);
-        outline-offset: 2px;
+        outline: var(--app-focus-width) solid var(--app-accent-text);
+        outline-offset: var(--app-focus-offset);
     }
 }
 @media (max-width: 47.5rem) {
     .account-trigger {
-        padding: 0 0.25rem;
+        padding: 0 var(--app-space-4);
     }
 }
 // ---- Page tabs ----------------------------------------------------------
@@ -701,34 +371,29 @@ body {
 // Every tab is a capsule with its own glass and border; the open page's tab
 // takes a tint and a border of the primary.
 .page-tab {
-    border: 1px solid var(--app-button-rim);
+    border: var(--app-border-width) solid var(--app-button-rim);
     border-radius: var(--app-radius-capsule);
     background-color: var(--app-button-fill);
-    box-shadow: var(--app-button-shadow-rest);
     a {
-        padding: 0.25rem 0.875rem;
+        padding: var(--app-space-4) var(--app-space-14);
     }
     &:has(.tab-close) a {
-        padding-right: 0.125rem;
+        padding-right: var(--app-space-2);
     }
     &:hover {
         background-color: var(--app-button-fill-hover);
     }
     &.active {
-        border-color: color-mix(in srgb, var(--app-primary) 45%, transparent);
-        background-color: color-mix(
-            in srgb,
-            var(--app-primary) 14%,
-            transparent
-        );
-        color: var(--app-text);
+        border-color: var(--app-tab-active-border);
+        background-color: var(--app-tab-active-fill);
+        color: var(--app-accent-text);
         &::after {
             display: none;
         }
     }
 }
 .tab-close {
-    border-radius: 50%;
+    border-radius: var(--app-radius-circle);
 }
 .tabs-hide {
     flex-shrink: 0;
@@ -746,82 +411,25 @@ body {
     backdrop-filter: var(--glass-lens) var(--app-pane-blur);
 }
 
-// The tool cluster is interactive glass: a press swells it slightly on the
-// snappy spring and brightens the light at the finger.
+// The glass responds to the light while the individual button moves.
 .tool-group[data-glass] {
     border-radius: var(--app-radius-capsule);
-    scale: 1;
-    transition:
-        scale var(--app-spring-snappy-duration) var(--app-spring-snappy),
-        $light-motion;
+    transition: $light-motion;
     .icon-button {
         border-radius: var(--app-radius-capsule);
-    }
-    &:active {
-        scale: 1.04;
-        transition-duration: 140ms, 180ms, 260ms;
     }
 }
 
 // ---- Buttons ------------------------------------------------------------
 
-:root {
-    --app-action-tint-weight: 28%;
-    --app-action-ink-weight: 32%;
-    --app-action-border: transparent;
-}
-:root.dark {
-    --app-action-tint-weight: 26%;
-}
-@media (prefers-contrast: more) {
-    :root {
-        --app-action-border: var(--app-text);
-    }
-}
-
 :root :is(.el-button:not(.is-text, .is-link), .app-manage-link) {
-    --app-action-accent: var(--app-primary);
-    --app-action-fill: color-mix(
-        in srgb,
-        var(--app-action-accent) var(--app-action-tint-weight),
-        var(--app-surface)
-    );
-    --app-action-ink: color-mix(
-        in srgb,
-        var(--app-action-accent) var(--app-action-ink-weight),
-        var(--app-text)
-    );
-    --app-action-hover: color-mix(
-        in srgb,
-        var(--app-action-fill),
-        var(--app-action-ink) 8%
-    );
-    --app-action-press: color-mix(
-        in srgb,
-        var(--app-action-fill),
-        var(--app-action-ink) 15%
-    );
-    border-radius: var(--app-radius-capsule);
+    border-radius: var(--app-radius-medium);
     background-image: none;
     box-shadow: none;
-    scale: 1;
-    transition:
-        scale var(--app-spring-snappy-duration) var(--app-spring-snappy),
-        background-color 160ms var(--app-ease),
-        color 160ms var(--app-ease);
 
-    @each $type in success, warning, danger, info {
-        &:where(.el-button--#{$type}) {
-            --app-action-accent: var(--el-color-#{$type});
-        }
-    }
-    &:active:not(:disabled, .is-disabled, .is-loading) {
-        scale: 0.97;
-        transition-duration: 120ms, 160ms, 160ms;
-    }
     &:focus-visible {
-        outline: 2px solid var(--app-action-accent);
-        outline-offset: 2px;
+        outline: var(--app-focus-width) solid var(--app-accent-text);
+        outline-offset: var(--app-focus-offset);
     }
 }
 
@@ -835,20 +443,36 @@ body {
     --el-button-active-bg-color: var(--app-action-press);
     --el-button-active-text-color: var(--app-action-ink);
     --el-button-active-border-color: var(--app-action-border);
-    --el-button-disabled-bg-color: color-mix(
-        in srgb,
-        var(--app-action-fill) 44%,
-        var(--app-surface)
-    );
+    --el-button-disabled-bg-color: var(--app-action-disabled-fill);
     --el-button-disabled-text-color: var(--app-muted);
     --el-button-disabled-border-color: var(--app-action-border);
+}
+
+:root :is(.el-button, .app-manage-link) {
+    scale: 1;
+    transition:
+        scale 160ms var(--app-ease),
+        background-color 140ms var(--app-ease),
+        color 140ms var(--app-ease);
+    &:active:not(:disabled, .is-disabled, .is-loading) {
+        transition-duration: 100ms, 0ms, 0ms;
+        &:not(:focus-visible) {
+            scale: var(--app-press-scale, 0.97);
+        }
+    }
+}
+
+:root .el-button--primary:is(.is-link, .is-text) {
+    --el-button-text-color: var(--app-accent-text);
+    --el-button-hover-text-color: var(--app-text);
+    --el-button-active-text-color: var(--app-text);
 }
 
 :root .app-manage-link {
     justify-content: center;
     min-height: 2.25rem;
-    padding: 0.25rem 1rem;
-    border: $px solid var(--app-action-border);
+    padding: var(--app-space-4) var(--app-space-16);
+    border: var(--app-border-width-glass) solid var(--app-action-border);
     background-color: var(--app-action-fill);
     color: var(--app-action-ink);
     @media (hover: hover) and (pointer: fine) {
@@ -877,10 +501,10 @@ body {
     --app-light-radius: var(--app-light-bloom);
 }
 
-// Single-line boxes are capsules; multi-line ones take a row's arc.
+// Form controls share the compact radius of their adjacent actions.
 .el-input__wrapper,
 .el-select__wrapper {
-    border-radius: var(--app-radius-capsule);
+    border-radius: var(--app-radius-medium);
 }
 .el-textarea__inner {
     border-radius: var(--app-radius-row);
@@ -915,7 +539,7 @@ body {
         var(--app-sheet-blur-strong),
         var(--app-sheet-shadow-modal)
     );
-    border-width: $px;
+    border-width: var(--app-border-width-glass);
 }
 .el-drawer.glass-drawer:not(.is-sheet) {
     border-radius: var(--app-radius-pane) 0 0 var(--app-radius-pane);
@@ -969,29 +593,11 @@ body {
 
 // ---- Sign-in frame ------------------------------------------------------
 
-// The sign-in card is a strong sheet over the globe, and the frame stands on
-// the same backdrop as the console, under its plotting grid.
-.auth-shell {
-    background:
-        linear-gradient(var(--app-grid) 1px, transparent 1px),
-        linear-gradient(90deg, var(--app-grid) 1px, transparent 1px),
-        var(--app-backdrop);
-    // One size per layer: the two grid lines, then the backdrop's fields.
-    background-size:
-        32px 32px,
-        32px 32px,
-        auto,
-        auto,
-        auto,
-        auto;
-}
-.auth-card {
-    @include sheet(
-        var(--app-sheet-fill-strong),
-        var(--app-sheet-blur-strong),
-        var(--app-sheet-shadow-modal)
-    );
-    border-radius: var(--app-radius-pane);
+:root
+    .auth-card
+    .form-submit.el-button--primary:not(:disabled, .is-disabled, .is-loading) {
+    --app-press-scale: 0.95;
+    border-radius: var(--app-radius-group);
 }
 
 // ---- Narrow-screen tab bar ----------------------------------------------
@@ -999,10 +605,10 @@ body {
 @media (max-width: 47.5rem) {
     // The tab bar is a floating capsule of glass.
     .primary-nav[data-glass] {
-        border-radius: 28px;
+        border-radius: var(--app-radius-tab-bar);
         touch-action: none;
         .nav-link {
-            border-radius: 24px;
+            border-radius: var(--app-radius-tab-lens);
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
             -webkit-user-drag: none;
@@ -1010,10 +616,6 @@ body {
             &:hover {
                 background: transparent;
             }
-        }
-        // The lens takes over from the per-link selection plate.
-        .nav-selection {
-            display: none;
         }
     }
     // The lens sits over the tabs and bends them, so it carries no blur:
@@ -1023,20 +625,11 @@ body {
         position: absolute;
         left: 0;
         z-index: 1;
-        border-radius: 24px;
+        border-radius: var(--app-radius-tab-lens);
         pointer-events: none;
         opacity: 0;
-        background: color-mix(
-            in srgb,
-            var(--app-primary) calc(6% + var(--lens-lift, 0) * 6%),
-            rgb(255 255 255 / calc(14% + var(--lens-lift, 0) * 10%))
-        );
-        box-shadow:
-            inset 0 1px 1px var(--app-edge-light),
-            inset 0 -1px 1px var(--app-edge-shade),
-            0 calc(2px + var(--lens-lift, 0) * 10px)
-                calc(6px + var(--lens-lift, 0) * 18px)
-                rgb(18 20 24 / calc(8% + var(--lens-lift, 0) * 10%));
+        background: var(--app-lens-fill);
+        box-shadow: var(--app-lens-shadow);
         transition: opacity 200ms var(--app-ease);
         will-change: transform;
         &[data-glass-lens] {
@@ -1044,17 +637,20 @@ body {
             backdrop-filter: var(--glass-lens) saturate(150%);
         }
     }
-    :root.dark .tab-lens {
-        background: color-mix(
-            in srgb,
-            var(--app-primary) calc(10% + var(--lens-lift, 0) * 8%),
-            rgb(255 255 255 / calc(6% + var(--lens-lift, 0) * 8%))
-        );
-    }
 }
 
 // ---- Without transparency, contrast or motion ---------------------------
 
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+    :root .tab-lens {
+        z-index: 0;
+        background: var(--app-primary-soft);
+        box-shadow: none;
+    }
+    .primary-nav .nav-link {
+        z-index: 1;
+    }
+}
 @media (prefers-reduced-transparency: reduce) {
     [data-glass][data-glass-lens],
     .tab-lens[data-glass-lens] {
@@ -1069,22 +665,20 @@ body {
         backdrop-filter: none;
     }
     .tab-lens {
-        outline: 2px solid var(--app-primary);
-        outline-offset: -2px;
+        outline: var(--app-focus-width) solid var(--app-accent-text);
+        outline-offset: calc(-1 * var(--app-focus-offset));
     }
 }
-// Reduce Motion removes the squeeze and the swell.
+// Reduce Motion removes the squeeze.
 @media (prefers-reduced-motion: reduce) {
     .el-button,
-    .app-manage-link,
-    .tool-group[data-glass] {
+    .app-manage-link {
         scale: 1 !important;
     }
 }
 :root[data-reduced-motion='true'] {
     .el-button,
-    .app-manage-link,
-    .tool-group[data-glass] {
+    .app-manage-link {
         scale: 1 !important;
     }
 }
@@ -1100,21 +694,21 @@ body {
         pointer-events: none;
     }
     &:focus-visible {
-        outline: 2px solid var(--app-primary);
-        outline-offset: 2px;
+        outline: var(--app-focus-width) solid var(--app-accent-text);
+        outline-offset: var(--app-focus-offset);
     }
 }
 // A copy button squeezes its icon on the press and lets it spring back;
 // success is announced only once the clipboard took the text.
-.copy-button svg {
-    scale: 1;
-    transition: scale var(--app-spring-snappy-duration) var(--app-spring-snappy);
-}
-.copy-button:active svg {
-    scale: 0.78;
-    transition-duration: 120ms;
-}
-// A loading state keeps its space but stays unseen for the first 180 ms.
-.loading-state.is-waiting {
-    visibility: hidden;
+@media (prefers-reduced-motion: no-preference) {
+    :root:not([data-reduced-motion='true']) .copy-button {
+        svg {
+            scale: 1;
+            transition: scale 160ms var(--app-ease);
+        }
+        &:active:not(:disabled, :focus-visible) svg {
+            scale: 0.9;
+            transition-duration: 100ms;
+        }
+    }
 }

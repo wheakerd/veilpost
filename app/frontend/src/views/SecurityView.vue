@@ -16,7 +16,6 @@ onBeforeRouteLeave(() => security.value?.confirmLeave() ?? true)
 <template>
     <div>
         <PageIntro
-            :eyebrow="t('common.shell.groups.security')"
             :title="t('common.routes.security')"
             :description="t('security.description')"
         />

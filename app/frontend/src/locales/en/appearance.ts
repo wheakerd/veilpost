@@ -5,14 +5,14 @@ export default {
         'Colors, vision mode, glass, page motion, and layout. Changes apply at once.',
     palette: {
         title: 'Theme color',
+        preview:
+            'Light on the left, dark on the right. Long bars show the primary color, short bars the secondary color.',
     },
     palettes: {
+        lab: { name: 'Lab Green' },
         abyss: { name: 'Deep Sea' },
         sky: { name: 'Clear Sky' },
-        emerald: { name: 'Emerald' },
-        mist: { name: 'Sea Mist' },
         amber: { name: 'Amber' },
-        coral: { name: 'Coral' },
         rose: { name: 'Rose' },
         violet: { name: 'Ultraviolet' },
     },

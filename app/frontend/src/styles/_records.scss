@@ -1,0 +1,82 @@
+.record-table .record-label {
+    display: none;
+}
+
+@media (max-width: 47.5rem) {
+    .data-table.record-table {
+        display: block;
+
+        thead {
+            // Keep column headers available when each record reflows.
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip-path: inset(50%);
+        }
+
+        tbody {
+            display: block;
+        }
+
+        tbody > tr {
+            display: grid;
+            grid-template-columns: repeat(
+                var(--record-columns, 2),
+                minmax(0, 1fr)
+            );
+            gap: var(--app-space-12);
+            padding: var(--app-space-16) min(var(--app-space-16), 4vw);
+            border-bottom: var(--app-border-width) solid var(--app-border);
+
+            &:last-child {
+                border-bottom: 0;
+            }
+
+            > td {
+                min-width: 0;
+                padding: 0;
+                border: 0;
+                text-align: start;
+                white-space: normal;
+                overflow-wrap: anywhere;
+            }
+        }
+
+        .record-cell-wide,
+        .row-form > td {
+            grid-column: 1 / -1;
+        }
+
+        .record-label {
+            display: block;
+            margin-bottom: var(--app-space-2);
+            color: var(--app-muted);
+            font-family: var(--app-font);
+        }
+
+        .row-form {
+            background: var(--app-raised);
+        }
+
+        .row-actions {
+            max-width: 100%;
+            justify-content: flex-start;
+        }
+    }
+
+    :root .record-table .el-tag {
+        max-width: 100%;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    :root .record-table :is(.row-actions, .form-actions) .el-button {
+        max-width: 100%;
+        height: auto;
+        min-height: max(44px, 2.75rem);
+        text-align: start;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+}

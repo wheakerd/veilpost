@@ -2,18 +2,11 @@ import type { AuthMessages } from '../zh-CN/auth'
 
 export default {
     layout: {
-        meta: '本機控制台',
-        status: '等待身分驗證',
-        statusVerify: '等待兩步驟驗證',
         footer: '僅限授權管理員存取',
         entering: '正在進入控制台…',
     },
     login: {
-        step: '01 · 帳號與密碼',
-        // {key} is rendered as a keycap.
-        keyHint: '按 {key} 登入',
         title: '登入控制台',
-        description: '使用你的管理帳號繼續',
         expired: '登入或驗證已逾時，請重新登入。',
         retry: '重試連線',
         setupRequired:
@@ -24,11 +17,11 @@ export default {
         connecting: '正在連線…',
         signingIn: '正在登入…',
         submit: '登入',
-        helpTwoFactor: '已啟用兩步驟驗證的帳號，會在下一步驗證身分',
         helpContact: '無法登入時，請聯絡控制台管理員',
     },
     verify: {
-        step: '02 · 動態驗證碼',
+        step: '動態驗證碼',
+        recoveryStep: '復原碼',
         title: '兩步驟驗證',
         totpDescription: '開啟驗證器，輸入目前的 6 位數動態驗證碼',
         recoveryDescription:

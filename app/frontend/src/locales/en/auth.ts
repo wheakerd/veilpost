@@ -2,18 +2,11 @@ import type { AuthMessages } from '../zh-CN/auth'
 
 export default {
     layout: {
-        meta: 'Local console',
-        status: 'Awaiting sign-in',
-        statusVerify: 'Awaiting two-step verification',
         footer: 'Authorized administrators only',
         entering: 'Entering the console…',
     },
     login: {
-        step: '01 · Account and password',
-        // {key} is rendered as a keycap.
-        keyHint: 'Press {key} to sign in',
         title: 'Sign in to the console',
-        description: 'Continue with your administrator account',
         expired: 'Your sign-in or verification has expired. Sign in again.',
         retry: 'Retry connection',
         setupRequired:
@@ -24,12 +17,11 @@ export default {
         connecting: 'Connecting…',
         signingIn: 'Signing in…',
         submit: 'Sign in',
-        helpTwoFactor:
-            'If two-step verification is on, you’ll confirm your identity in the next step',
         helpContact: 'Can’t sign in? Contact your console administrator',
     },
     verify: {
-        step: '02 · One-time code',
+        step: 'One-time code',
+        recoveryStep: 'Recovery code',
         title: 'Two-step verification',
         totpDescription:
             'Open your authenticator app and enter the current 6-digit code',

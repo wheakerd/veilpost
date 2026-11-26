@@ -3,22 +3,12 @@
 // The bounds and most of the curve are rem, so the reader's default font
 // size and page zoom still scale it; only a small share follows the width.
 html {
-    font-size: clamp(0.9375rem, 0.8125rem + 0.2083vw, 1.125rem);
+    font-size: var(--app-font-size-root);
 }
 
 // Element Plus sizes its text and controls in px; here they follow the root
 // as well. Its component styles load with each component, after these, so
 // every rule carries :root to win without depending on the order.
-:root {
-    --el-font-size-extra-large: 1.25rem;
-    --el-font-size-large: 1.125rem;
-    --el-font-size-medium: 1rem;
-    --el-font-size-base: 0.875rem;
-    --el-font-size-small: 0.8125rem;
-    --el-font-size-extra-small: 0.75rem;
-    --el-component-size-small: 1.5rem;
-    --el-component-size: 2rem;
-}
 :root {
     :is(
         .el-button--small,
@@ -35,7 +25,7 @@ html {
         .el-dropdown-menu--small .el-dropdown-menu__item,
         .el-form-item--small
     ) {
-        font-size: 0.75rem;
+        font-size: var(--app-font-size-caption);
     }
     :is(
         .el-textarea__clear,
@@ -58,18 +48,18 @@ html {
         .el-form-item,
         .el-loading-spinner .el-loading-text
     ) {
-        font-size: 0.875rem;
+        font-size: var(--app-font-size-body);
     }
     :is(.el-drawer__title, .el-segmented--large) {
-        font-size: 1rem;
+        font-size: var(--app-font-size-base);
     }
     :is(.el-menu-item [class^='el-icon'], .el-sub-menu .el-icon) {
-        font-size: 1.125rem;
+        font-size: var(--app-font-size-heading);
     }
     .el-sub-menu .el-sub-menu__icon-arrow {
-        font-size: 0.75rem;
+        font-size: var(--app-font-size-caption);
     }
     .el-message-box__status {
-        font-size: 1.5rem;
+        font-size: var(--app-font-size-display);
     }
 }

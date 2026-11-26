@@ -82,6 +82,10 @@ test.describe('signed in', () => {
         await expect(
             page.getByRole('tooltip', { name: 'VPN 节点' }),
         ).toBeVisible()
+        await main
+            .getByRole('link', { name: '网络概览', exact: true })
+            .press('Enter')
+        await expect(page).toHaveURL('http://127.0.0.1:4173/')
         const box = await page.locator('.sidebar').boundingBox()
         expect(box!.width).toBeLessThanOrEqual(64)
         expect(JSON.parse(await preferences(page))).toMatchObject({
@@ -111,8 +115,26 @@ test.describe('signed in', () => {
         await expect(mode).toHaveAccessibleName('界面外观：深色')
 
         // Narrow screens drop the reload button to fit the bar.
-        if (testInfo.project.name !== 'mobile')
-            await page.getByRole('button', { name: '刷新当前页' }).click()
+        if (testInfo.project.name !== 'mobile') {
+            const refresh = page.getByRole('button', { name: '刷新当前页' })
+            const rotation = await refresh
+                .locator('.refresh-icon')
+                .evaluateHandle((icon) => {
+                    const state = { started: false }
+                    icon.addEventListener(
+                        'transitionrun',
+                        () => {
+                            state.started = true
+                        },
+                        { once: true },
+                    )
+                    return state
+                })
+            await refresh.click()
+            await expect
+                .poll(() => rotation.evaluate((state) => state.started))
+                .toBe(true)
+        }
         await expect(
             page.getByRole('heading', { name: '偏好设置', exact: true }),
         ).toBeVisible()
@@ -194,15 +216,86 @@ test.describe('signed in', () => {
     })
 })
 
-test('sign-in offers language and appearance switches over the globe', async ({
+test('sign-in adapts its layout and offers language and appearance switches', async ({
     page,
-}) => {
+    account,
+}, testInfo) => {
     await page.emulateMedia({ colorScheme: 'dark' })
     await page.goto('/login')
-    await expect(page.locator('canvas.lab-globe')).toHaveAttribute(
+    const artwork = page.locator('.auth-art')
+    await expect(artwork).toHaveAttribute('aria-hidden', 'true')
+    await expect(artwork).toHaveText('')
+    if (testInfo.project.name === 'mobile') {
+        await expect(artwork).toBeHidden()
+        const brand = (await page.locator('.auth-brand').boundingBox())!
+        const appearance = (await page.locator('.auth-mode').boundingBox())!
+        const brandCenter = brand.y + brand.height / 2
+        const appearanceCenter = appearance.y + appearance.height / 2
+        expect(Math.abs(brandCenter - appearanceCenter)).toBeLessThanOrEqual(1)
+    } else {
+        await expect(artwork).toBeVisible()
+        await expect(artwork.locator('img')).toHaveAttribute(
+            'src',
+            '/favicon.svg',
+        )
+    }
+    await expect(page.getByLabel('账号', { exact: true })).toBeVisible()
+    await expect(page.locator('.route-content')).toHaveCSS('opacity', '1')
+    const touchControls = page.locator(
+        '.auth-languages button, .auth-mode, .password-toggle, .auth-card .form-submit',
+    )
+    await expect(touchControls).toHaveCount(7)
+    for (const control of await touchControls.all()) {
+        const box = await control.boundingBox()
+        expect(box?.width).toBeGreaterThanOrEqual(44)
+        expect(box?.height).toBeGreaterThanOrEqual(44)
+    }
+    await page.screenshot({
+        path: testInfo.outputPath('sign-in-dark.png'),
+        animations: 'disabled',
+    })
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    const submit = page.getByRole('button', { name: '登录', exact: true })
+    const submitBox = (await submit.boundingBox())!
+    const submitX = submitBox.x + submitBox.width / 2
+    await page.mouse.move(submitX, submitBox.y + submitBox.height / 2)
+    await page.mouse.down()
+    await expect(submit).toHaveCSS('scale', '0.95')
+    await page.mouse.move(submitX, submitBox.y - 2)
+    await page.mouse.up()
+    await expect(submit).toHaveCSS('scale', '1')
+    await page.getByLabel('账号', { exact: true }).fill(account.username)
+    const passwordToggle = page.locator('.password-toggle')
+    const password = page.getByLabel('密码', { exact: true })
+    await expect(passwordToggle).toHaveText('')
+    await expect(passwordToggle).toHaveAccessibleName('显示密码')
+    await expect(passwordToggle.locator('svg')).toHaveAttribute(
         'aria-hidden',
         'true',
     )
+    const toggleBox = (await passwordToggle.boundingBox())!
+    await page.mouse.move(
+        toggleBox.x + toggleBox.width / 2,
+        toggleBox.y + toggleBox.height / 2,
+    )
+    await page.mouse.down()
+    await expect(passwordToggle).toHaveAttribute('aria-pressed', 'false')
+    await expect
+        .poll(() =>
+            passwordToggle.evaluate(
+                (element) => getComputedStyle(element).transform,
+            ),
+        )
+        .not.toBe('none')
+    await page.mouse.up()
+    await expect(passwordToggle).toHaveAttribute('aria-pressed', 'true')
+    await expect(passwordToggle).toHaveAccessibleName('隐藏密码')
+    await expect(password).toHaveAttribute('type', 'text')
+    await expect(passwordToggle).toHaveCSS('transform', 'none')
+    await passwordToggle.press('Space')
+    await expect(passwordToggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(password).toHaveAttribute('type', 'password')
+    await expect(passwordToggle).toHaveCSS('transform', 'none')
     const languages = page.getByRole('group', { name: '界面语言' })
     await expect(
         languages.getByRole('button', { name: '简体中文' }),
@@ -212,6 +305,8 @@ test('sign-in offers language and appearance switches over the globe', async ({
         page.getByRole('heading', { name: 'Sign in to the console' }),
     ).toBeVisible()
     await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+    const username = page.getByLabel('Username', { exact: true })
+    await expect(username).toHaveValue(account.username)
     const html = page.locator('html')
     const mode = page.getByRole('button', { name: /^Appearance: / })
     await expect(mode).toHaveAccessibleName('Appearance: Dark')
@@ -219,8 +314,69 @@ test('sign-in offers language and appearance switches over the globe', async ({
     await mode.click()
     await expect(mode).toHaveAccessibleName('Appearance: Light')
     await expect(html).not.toHaveClass(/dark/)
+    await username.fill('')
+    await username.blur()
+    await page.screenshot({
+        path: testInfo.outputPath('sign-in-light.png'),
+        animations: 'disabled',
+    })
     await mode.click()
     await expect(mode).toHaveAccessibleName('Appearance: Dark')
     await expect(html).toHaveClass(/dark/)
-    await expect(page.locator('kbd')).toHaveText('Enter')
+})
+
+test('browser autofill stays inside the sign-in fields in both appearances', async ({
+    page,
+}, testInfo) => {
+    await page.goto('/login')
+    const group = page.locator('.login-fields')
+    await page.getByLabel('账号', { exact: true }).fill('operator')
+    const password = page.getByLabel('密码', { exact: true })
+    await password.fill('autofill-preview')
+    await password.blur()
+
+    // Exercise Chromium's own autofill paint without using a saved credential.
+    const session = await page.context().newCDPSession(page)
+    await session.send('DOM.enable')
+    await session.send('CSS.enable')
+    const { root } = await session.send('DOM.getDocument')
+    for (const selector of ['#username', '#password']) {
+        const { nodeId } = await session.send('DOM.querySelector', {
+            nodeId: root.nodeId,
+            selector,
+        })
+        await session.send('CSS.forcePseudoState', {
+            nodeId,
+            forcedPseudoClasses: ['autofill'],
+        })
+    }
+
+    for (const colorScheme of ['light', 'dark'] as const) {
+        await page.emulateMedia({ colorScheme })
+        await expect(page.locator('html')).toHaveCSS(
+            'color-scheme',
+            colorScheme,
+        )
+        await expect(group).toHaveCSS('overflow', 'hidden')
+        const rows = group.locator('.form-field')
+        for (const row of await rows.all()) {
+            const fill = await row.evaluate(
+                (el) => getComputedStyle(el).backgroundColor,
+            )
+            const input = row.locator('input')
+            expect(await input.evaluate((el) => el.matches(':autofill'))).toBe(
+                true,
+            )
+            const shadow = await input.evaluate(
+                (el) => getComputedStyle(el).boxShadow,
+            )
+            expect(shadow).toContain(fill)
+            expect(shadow).toContain('inset')
+        }
+        const path = testInfo.outputPath(`sign-in-autofill-${colorScheme}.png`)
+        await page
+            .locator('.auth-panel')
+            .screenshot({ path, animations: 'disabled' })
+    }
+    await session.detach()
 })

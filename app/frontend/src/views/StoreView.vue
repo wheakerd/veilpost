@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import Package from '~icons/lucide/package'
 import { useI18n } from 'vue-i18n'
 import PageIntro from '@/components/PageIntro.vue'
 import Reveal from '@/components/Reveal.vue'
@@ -151,12 +152,11 @@ onBeforeUnmount(clearSecrets)
 <template>
     <div>
         <PageIntro
-            :eyebrow="t('common.shell.groups.software')"
             :title="t('common.routes.store')"
             :description="t('apps.store.description')"
         />
 
-        <section class="plain-panel store-panel" aria-labelledby="store-title">
+        <section class="store-panel" aria-labelledby="store-title">
             <div class="panel-heading">
                 <h2 id="store-title">{{ t('apps.store.listTitle') }}</h2>
                 <ElTag
@@ -195,6 +195,9 @@ onBeforeUnmount(clearSecrets)
                     :data-app-id="app.id"
                 >
                     <div class="app-heading">
+                        <span class="destination-icon" aria-hidden="true"
+                            ><Package
+                        /></span>
                         <div class="app-title">
                             <h3>{{ catalogText(app.name, app.id) }}</h3>
                             <small>{{
@@ -203,9 +206,12 @@ onBeforeUnmount(clearSecrets)
                                 })
                             }}</small>
                         </div>
-                        <ElTag :type="state(app).tag" effect="plain">{{
-                            state(app).label
-                        }}</ElTag>
+                        <ElTag
+                            class="app-status"
+                            :type="state(app).tag"
+                            effect="plain"
+                            >{{ state(app).label }}</ElTag
+                        >
                     </div>
                     <p class="app-description">
                         {{ catalogText(app.description) }}

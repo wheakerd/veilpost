@@ -180,14 +180,14 @@ async function signOut() {
     display: flex;
     min-block-size: 100%;
     flex-direction: column;
-    padding: 1.25rem 0.875rem 0.875rem;
+    padding: var(--app-space-20) var(--app-space-14) var(--app-space-14);
 }
 
 .account-identity {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.25rem 0.5rem 1rem;
+    gap: var(--app-space-12);
+    padding: var(--app-space-4) var(--app-space-8) var(--app-space-16);
 
     .account-avatar {
         flex: 0 0 auto;
@@ -196,7 +196,7 @@ async function signOut() {
         border-color: transparent;
         background: var(--app-primary);
         color: var(--app-on-primary);
-        font-size: 1.125rem;
+        font-size: var(--app-font-size-heading);
     }
 }
 
@@ -206,15 +206,15 @@ async function signOut() {
     gap: 0.1875rem;
 
     strong {
-        font-size: 0.9375rem;
-        font-weight: 600;
+        font-size: var(--app-font-size-subheading);
+        font-weight: var(--app-font-weight-semibold);
         line-height: 1.4;
         overflow-wrap: anywhere;
     }
 
     small {
         color: var(--app-text-secondary);
-        font-size: 0.8125rem;
+        font-size: var(--app-font-size-small);
         line-height: 1.35;
         overflow-wrap: anywhere;
     }
@@ -222,7 +222,7 @@ async function signOut() {
 
 .account-navigation {
     display: grid;
-    gap: 0.25rem;
+    gap: var(--app-space-4);
 }
 
 :root .account-sidebar .account-section-button.el-button.is-text {
@@ -230,16 +230,16 @@ async function signOut() {
     width: 100%;
     min-height: 2.375rem;
     margin-inline-start: 0;
-    padding: 0.5rem 0.625rem;
+    padding: var(--app-space-8) var(--app-space-10);
     border-radius: var(--app-radius-control);
     color: var(--app-text);
-    font-size: 0.875rem;
+    font-size: var(--app-font-size-body);
     text-align: start;
 
     > span {
         display: flex;
         align-items: center;
-        gap: 0.625rem;
+        gap: var(--app-space-10);
         min-inline-size: 0;
     }
 
@@ -248,13 +248,9 @@ async function signOut() {
     }
 
     &[aria-current='true'] {
-        background: color-mix(
-            in srgb,
-            var(--app-primary) 26%,
-            var(--app-surface)
-        );
-        color: color-mix(in srgb, var(--app-primary) 36%, var(--app-text));
-        font-weight: 600;
+        background: var(--app-account-selected-fill);
+        color: var(--app-account-selected-ink);
+        font-weight: var(--app-font-weight-semibold);
     }
 
     &.account-sign-out {
@@ -268,8 +264,8 @@ async function signOut() {
 
 .account-sidebar-footer {
     margin-block-start: auto;
-    padding-block-start: 0.5rem;
-    border-block-start: 1px solid var(--app-border);
+    padding-block-start: var(--app-space-8);
+    border-block-start: var(--app-border-width) solid var(--app-border);
 }
 
 .account-profile {
@@ -279,38 +275,34 @@ async function signOut() {
         display: grid;
         grid-template-columns: minmax(0, min(8rem, 30%)) minmax(0, 1fr);
         align-items: baseline;
-        gap: 0.75rem;
+        gap: var(--app-space-12);
         min-block-size: 3.25rem;
-        padding: 1rem;
+        padding: var(--app-space-16);
         border-radius: var(--app-radius-row);
-        background: color-mix(
-            in srgb,
-            var(--app-primary) 13%,
-            var(--app-surface)
-        );
-        font-size: 0.875rem;
+        background: var(--app-profile-row-fill);
+        font-size: var(--app-font-size-body);
         line-height: 1.45;
         overflow-wrap: anywhere;
     }
 
     dd {
         margin: 0;
-        font-weight: 500;
+        font-weight: var(--app-font-weight-medium);
     }
 }
 
 .account-feedback:not(:empty) {
-    margin-block-end: 1rem;
+    margin-block-end: var(--app-space-16);
 }
 
 @media (max-width: 47.5rem) {
     .account-sidebar {
-        padding: 0.75rem;
+        padding: var(--app-space-12);
     }
 
     .account-identity {
         padding-inline-end: 2.75rem;
-        padding-block-end: 0.625rem;
+        padding-block-end: var(--app-space-10);
     }
 
     .account-navigation {
@@ -318,8 +310,8 @@ async function signOut() {
     }
 
     .account-sidebar-footer {
-        margin-block-start: 0.5rem;
-        padding-block-start: 0.375rem;
+        margin-block-start: var(--app-space-8);
+        padding-block-start: var(--app-space-6);
     }
 }
 </style>

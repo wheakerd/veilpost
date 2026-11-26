@@ -9,11 +9,11 @@
         resize: vertical;
         min-height: 6rem !important;
         font-family: var(--app-mono-font);
-        font-size: 0.8125rem;
+        font-size: var(--app-font-size-small);
         line-height: 1.6;
     }
     small a {
-        color: var(--app-primary);
+        color: var(--app-accent-text);
     }
 }
 .choice-group,
@@ -21,9 +21,9 @@
     margin: 0;
     min-width: 0;
     legend {
-        font-weight: 500;
+        font-weight: var(--app-font-weight-medium);
         padding: 0;
-        margin-bottom: 0.5rem;
+        margin-bottom: var(--app-space-8);
     }
 }
 .choice-group {
@@ -31,65 +31,89 @@
     padding: 0;
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem 1.25rem;
+    gap: var(--app-space-8) var(--app-space-20);
     label {
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
-        font-weight: 400;
+        gap: var(--app-space-8);
+        font-weight: var(--app-font-weight-regular);
         min-height: 2.25rem;
     }
     input {
         width: 1rem;
         height: 1rem;
         min-height: 0;
-        accent-color: var(--app-primary);
+        accent-color: var(--app-accent-text);
     }
 }
 .certs-subgroup {
     display: grid;
-    gap: 1rem;
-    border: 1px solid var(--app-border);
+    gap: var(--app-space-16);
+    border: var(--app-border-width) solid var(--app-border);
     border-radius: var(--app-radius-card);
-    padding: 1rem 1rem 1.25rem;
+    padding: var(--app-space-16) var(--app-space-16) var(--app-space-20);
     legend {
-        padding-inline: 0.375rem;
+        padding-inline: var(--app-space-6);
         margin-bottom: 0;
     }
 }
-.certs-form .field-note,
-.cert-item .field-note {
+.certs-form .field-note {
     color: var(--app-text-secondary);
-    font-size: 0.8125rem;
+    font-size: var(--app-font-size-small);
     margin: 0;
 }
-.cert-item {
-    .cert-error,
-    .secret-status {
-        grid-column: 1 / -1;
+.cert-table {
+    --record-columns: 3;
+
+    .node-name {
+        align-items: flex-start;
+        overflow-wrap: anywhere;
+        > div {
+            min-width: 0;
+        }
+        .node-dot {
+            margin-top: 0.4375rem;
+        }
     }
 }
 .cert-tags {
     display: inline-flex;
     flex-wrap: wrap;
-    gap: 0.375rem;
-    flex-shrink: 0;
+    gap: var(--app-space-6);
 }
 .cert-more {
     color: var(--app-muted);
-    font-weight: 400;
-    font-size: 0.8125rem;
+    font-weight: var(--app-font-weight-regular);
+    font-size: var(--app-font-size-small);
 }
 .cert-error {
-    margin: 0;
+    max-inline-size: 60ch;
+    margin: var(--app-space-6) 0 0;
     color: var(--app-danger);
-    font-size: 0.8125rem;
+    font-size: var(--app-font-size-small);
     overflow-wrap: anywhere;
     code {
         display: block;
-        margin-top: 0.375rem;
+        margin-top: var(--app-space-6);
         color: var(--app-muted);
-        font: 0.75rem/1.6 var(--app-mono-font);
+        font: var(--app-font-size-caption)/1.6 var(--app-mono-font);
+    }
+}
+.credential-icon {
+    flex-shrink: 0;
+    color: var(--app-accent-text);
+}
+.credential-details {
+    display: grid;
+    min-width: 0;
+    gap: var(--app-space-8);
+    .node-meta {
+        flex-wrap: wrap;
+        row-gap: var(--app-space-8);
+        dd {
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
     }
 }
 .secret-status {
@@ -98,12 +122,13 @@
     padding: 0;
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem 1.25rem;
+    gap: var(--app-space-6) var(--app-space-16);
     li {
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
-        font-size: 0.75rem;
-        color: var(--app-muted);
+        flex-wrap: wrap;
+        gap: var(--app-space-8);
+        font-size: var(--app-font-size-caption);
+        color: var(--app-text-secondary);
     }
 }

@@ -27,7 +27,29 @@ test('navigation stays reachable while scrolling and rapid changes settle on the
 }, testInfo) => {
     const errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
+    if (testInfo.project.name === 'mobile') {
+        await page.addInitScript(() => {
+            localStorage.setItem(
+                'veilpost:preferences:v1',
+                JSON.stringify({ sidebarCollapsed: true }),
+            )
+        })
+    }
     await page.goto('/')
+    if (testInfo.project.name === 'mobile') {
+        const bottomBar = page.getByRole('navigation', { name: '主导航' })
+        const labels = bottomBar.locator('.nav-label')
+        await expect(labels).toHaveCount(4)
+        for (const label of await labels.all())
+            await expect(label).toBeVisible()
+        for (const name of ['软件商店', '证书', 'DNS 服务商']) {
+            const shortcut = page.getByRole('link', { name, exact: true })
+            await expect(shortcut).toBeVisible()
+            expect(
+                (await shortcut.boundingBox())!.height,
+            ).toBeGreaterThanOrEqual(44)
+        }
+    }
     for (const name of ['VPN 节点', '账号安全', '网络概览', '账号安全']) {
         await page
             .getByRole('navigation', { name: '主导航' })
@@ -125,6 +147,17 @@ test('user and system reduced motion keep feedback without moving controls or pa
         'data-reduced-motion',
         'true',
     )
+    await page.reload({ waitUntil: 'commit' })
+    const splash = page.locator('.boot-loading')
+    await expect(page.locator('html')).toHaveAttribute(
+        'data-reduced-motion',
+        'true',
+    )
+    expect(
+        await splash
+            .locator('.boot-emblem')
+            .evaluate((el) => getComputedStyle(el, '::after').animationName),
+    ).toBe('none')
     const palette = paletteOption(page, '玫瑰红')
     const chip = labelOf(palette)
     await chip.scrollIntoViewIfNeeded()
@@ -234,6 +267,16 @@ test('transparency and contrast preferences provide solid readable navigation', 
         'backdrop-filter',
         'none',
     )
+    if (testInfo.project.name === 'mobile') {
+        const lens = page.locator('.tab-lens')
+        await expect(lens).toHaveCSS('box-shadow', 'none')
+        await expect(lens).toHaveCSS('z-index', '0')
+        await expect(
+            page
+                .getByRole('navigation', { name: '主导航' })
+                .getByRole('link', { name: 'VPN 节点', exact: true }),
+        ).toHaveCSS('z-index', '1')
+    }
     await session.send('Emulation.setEmulatedMedia', {
         features: [{ name: 'prefers-contrast', value: 'more' }],
     })
@@ -241,7 +284,7 @@ test('transparency and contrast preferences provide solid readable navigation', 
     await expect(
         page.locator(
             testInfo.project.name === 'mobile'
-                ? '.nav-selection'
+                ? '.tab-lens'
                 : '.sidebar-menu .el-menu-item.is-active',
         ),
     ).toHaveCSS('outline-style', 'solid')
@@ -253,7 +296,7 @@ test('transparency and contrast preferences provide solid readable navigation', 
     await expect(page.locator('html')).toHaveClass('dark')
     await expect(page.locator('.topbar')).toHaveCSS(
         'background-color',
-        'rgb(18, 21, 27)',
+        'rgb(25, 28, 32)',
     )
 })
 
@@ -269,6 +312,15 @@ test('200 percent text fits console and login at desktop and narrow mobile width
         await page.goto(path)
         await expect(page.locator('h1')).toBeVisible()
         await expect(page.locator('.route-content')).toHaveCSS('opacity', '1')
+        if (path === '/') {
+            await expect(page.getByTestId('overview-nodes')).not.toHaveText(
+                '正在读取',
+            )
+            await page.screenshot({
+                path: testInfo.outputPath('overview.png'),
+                animations: 'disabled',
+            })
+        }
         await page.evaluate(() => {
             document.documentElement.style.fontSize = '200%'
         })
@@ -277,6 +329,24 @@ test('200 percent text fits console and login at desktop and narrow mobile width
                 () => document.documentElement.scrollWidth <= innerWidth,
             ),
         ).toBe(true)
+        if (path === '/') {
+            const readings = page.locator('.stat')
+            await expect(readings).toHaveCount(4)
+            expect(
+                await readings.evaluateAll((items) =>
+                    items.every((item) => item.scrollWidth <= item.clientWidth),
+                ),
+            ).toBe(true)
+            if (testInfo.project.name === 'mobile') {
+                const columns = await readings.evaluateAll(
+                    (items) =>
+                        new Set(
+                            items.map((item) => item.getBoundingClientRect().x),
+                        ).size,
+                )
+                expect(columns).toBe(1)
+            }
+        }
     }
     const modeOptions = await page.locator('.el-radio-button__inner').all()
     for (const option of modeOptions) {
@@ -303,6 +373,9 @@ test('200 percent text fits console and login at desktop and narrow mobile width
             () => document.documentElement.scrollWidth <= innerWidth,
         ),
     ).toBe(true)
+    const passwordBox = (await page.locator('#password').boundingBox())!
+    const eyeBox = (await page.locator('.password-toggle').boundingBox())!
+    expect(passwordBox.x + passwordBox.width).toBeLessThanOrEqual(eyeBox.x)
     await login(page, account)
     await expect(page).toHaveURL('http://127.0.0.1:4173/')
 })

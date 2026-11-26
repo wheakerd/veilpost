@@ -2,15 +2,14 @@ const appearance = {
     description: '配色、视觉模式、玻璃质感、页面动画与布局行为。修改立即生效。',
     palette: {
         title: '主题色',
+        preview: '左侧为浅色，右侧为深色。长条是主色，短条是副色。',
     },
     // Keyed by palette id in src/theme/palettes.ts.
     palettes: {
+        lab: { name: '实验室绿' },
         abyss: { name: '深海蓝' },
         sky: { name: '晴空蓝' },
-        emerald: { name: '翡翠绿' },
-        mist: { name: '雾海青' },
         amber: { name: '琥珀橙' },
-        coral: { name: '珊瑚橙' },
         rose: { name: '玫瑰红' },
         violet: { name: '电光紫' },
     },

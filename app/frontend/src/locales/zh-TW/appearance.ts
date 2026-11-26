@@ -4,14 +4,13 @@ export default {
     description: '配色、視覺模式、玻璃質感、頁面動畫與版面行為。變更立即生效。',
     palette: {
         title: '主題色',
+        preview: '左側為淺色，右側為深色。長條是主色，短條是副色。',
     },
     palettes: {
+        lab: { name: '實驗室綠' },
         abyss: { name: '深海藍' },
         sky: { name: '晴空藍' },
-        emerald: { name: '翡翠綠' },
-        mist: { name: '霧海青' },
         amber: { name: '琥珀橙' },
-        coral: { name: '珊瑚橙' },
         rose: { name: '玫瑰紅' },
         violet: { name: '電光紫' },
     },

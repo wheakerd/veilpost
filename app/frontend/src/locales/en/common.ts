@@ -61,7 +61,6 @@ export default {
     },
     loading: {
         title: 'Loading the console',
-        description: 'Restoring your sign-in. This only takes a moment.',
     },
     notFound: {
         title: 'This page doesn’t exist',
@@ -81,8 +80,6 @@ export default {
     password: {
         label: 'Password',
         current: 'Current password',
-        show: 'Show',
-        hide: 'Hide',
         showLabel: 'Show password',
         hideLabel: 'Hide password',
         capsLock: 'Caps Lock is on',

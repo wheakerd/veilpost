@@ -1,23 +1,17 @@
 import { isLocale, type Locale } from '@/i18n/locales'
 
-// Names live in the language packs under appearance.palettes.<id>. The
-// colours are the light-mode primary and secondary from $palettes in
-// styles/_themes.scss (which also holds the dark variants and the text colour
-// on the primary); the preference chips show the primary as a swatch.
+// Keep these persisted IDs in sync with $palettes in styles/_themes.scss.
+// Names live in the language packs under appearance.palettes.<id>.
 export const palettes = [
-    { id: 'abyss', primary: '#4b4ee6', secondary: '#c2289f' },
-    { id: 'sky', primary: '#0b96d4', secondary: '#7048e8' },
-    { id: 'emerald', primary: '#0ea57d', secondary: '#2f6fe8' },
-    { id: 'mist', primary: '#10a196', secondary: '#e2533f' },
-    { id: 'amber', primary: '#d47b00', secondary: '#5b46e0' },
-    { id: 'coral', primary: '#f3604a', secondary: '#0b8f8a' },
-    { id: 'rose', primary: '#dc2a66', secondary: '#8a3ff0' },
-    { id: 'violet', primary: '#9b3cf0', secondary: '#0a95c9' },
+    'lab',
+    'abyss',
+    'sky',
+    'amber',
+    'rose',
+    'violet',
 ] as const
 
-export type Palette = (typeof palettes)[number]['id']
-// A stored id that no longer exists (lagoon, harbor and heather were retired)
-// falls back to this one.
+export type Palette = (typeof palettes)[number]
 export const defaultPalette: Palette = 'abyss'
 export type ColorMode = 'light' | 'dark' | 'system'
 export const visions = ['standard', 'colorSafe', 'grayscale'] as const
@@ -61,6 +55,19 @@ function oneOf<T extends string>(
     return options.includes(value as T) ? (value as T) : fallback
 }
 
+function sanitizePalette(value: unknown): Palette {
+    switch (value) {
+        case 'emerald':
+            return 'lab'
+        case 'mist':
+            return 'sky'
+        case 'coral':
+            return 'rose'
+        default:
+            return oneOf(palettes, value, defaultPalette)
+    }
+}
+
 export function sanitizePreferences(value: unknown) {
     const data =
         value && typeof value === 'object'
@@ -68,11 +75,7 @@ export function sanitizePreferences(value: unknown) {
             : {}
     const width = data.sidebarWidth
     return {
-        palette: oneOf(
-            palettes.map((palette) => palette.id),
-            data.palette,
-            defaultPalette,
-        ),
+        palette: sanitizePalette(data.palette),
         mode: oneOf<ColorMode>(
             ['light', 'dark', 'system'],
             data.mode,

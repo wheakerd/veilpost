@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import Eye from '~icons/lucide/eye'
+import EyeOff from '~icons/lucide/eye-off'
 
 defineProps<{
     id: string
     label?: string
     disabled?: boolean
+    placeholder?: string
     autocomplete?: 'current-password' | 'new-password'
 }>()
 const model = defineModel<string>({ required: true })
@@ -22,7 +25,9 @@ function readCapsLock(event: Event) {
 <template>
     <div class="form-field">
         <div class="field-label-row">
-            <label :for="id">{{ label ?? t('common.password.label') }}</label>
+            <label :for="id"
+                ><span>{{ label ?? t('common.password.label') }}</span></label
+            >
             <span
                 v-if="capsLock"
                 :id="`${id}-caps`"
@@ -38,6 +43,7 @@ function readCapsLock(event: Event) {
             :name="id"
             :type="visible ? 'text' : 'password'"
             :autocomplete="autocomplete ?? 'current-password'"
+            :placeholder="placeholder"
             required
             maxlength="256"
             :disabled="disabled"
@@ -47,6 +53,9 @@ function readCapsLock(event: Event) {
             @mousedown="readCapsLock"
             @blur="capsLock = false"
         >
+            <template v-if="$slots.prefix" #prefix
+                ><slot name="prefix"
+            /></template>
             <template #suffix>
                 <button
                     type="button"
@@ -57,14 +66,14 @@ function readCapsLock(event: Event) {
                             : t('common.password.showLabel')
                     "
                     :aria-pressed="visible"
+                    :aria-controls="id"
                     :disabled="disabled"
                     @click="visible = !visible"
                 >
-                    {{
-                        visible
-                            ? t('common.password.hide')
-                            : t('common.password.show')
-                    }}
+                    <component
+                        :is="visible ? EyeOff : Eye"
+                        aria-hidden="true"
+                    />
                 </button>
             </template>
         </ElInput>

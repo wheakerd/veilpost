@@ -6,8 +6,85 @@
             name="viewport"
             content="width=device-width, initial-scale=1.0, viewport-fit=cover"
         />
+        <style>
+            .boot-loading {
+                position: fixed;
+                inset: 0;
+                display: grid;
+                place-content: center;
+                justify-items: center;
+                gap: var(--app-space-16);
+                background: var(--app-boot-surface);
+                color: var(--app-boot-ink);
+                font: var(--app-font-weight-medium)
+                    var(--app-font-size-base)/1.5 var(--app-font);
+            }
+            .boot-emblem {
+                position: relative;
+                display: grid;
+                place-items: center;
+                width: 5.5rem;
+                aspect-ratio: 1;
+            }
+            .boot-emblem::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                border: var(--app-border-width-strong) solid
+                    var(--app-boot-track);
+                border-top-color: currentColor;
+                border-radius: var(--app-radius-circle);
+                animation: boot-turn 1s linear infinite;
+            }
+            @keyframes boot-turn {
+                to {
+                    transform: rotate(1turn);
+                }
+            }
+            :root[data-reduced-motion='true'] .boot-emblem::after {
+                animation: none;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .boot-emblem::after {
+                    animation: none;
+                }
+            }
+        </style>
     </head>
     <body>
-        <div id="root"></div>
+        <div id="root">
+            <div id="boot-screen" class="boot-loading" role="status">
+                <span class="boot-emblem" aria-hidden="true">
+                    <img src="/favicon.svg" width="48" height="48" alt="" />
+                </span>
+                <span id="boot-caption"></span>
+            </div>
+        </div>
+        <script>
+            {
+                const root = document.documentElement
+                document.getElementById('boot-caption').textContent =
+                    document.title
+                try {
+                    const saved = JSON.parse(
+                        localStorage.getItem('veilpost:preferences:v1') ??
+                            localStorage.getItem(
+                                'vpn-console:preferences:v1',
+                            ) ??
+                            'null',
+                    )
+                    if (saved?.mode === 'light' || saved?.mode === 'dark')
+                        root.style.colorScheme = saved.mode
+                    if (saved?.reducedMotion === true)
+                        root.dataset.reducedMotion = 'true'
+                } catch {
+                    // The splash follows the system if preferences are unavailable.
+                }
+
+                window.veilpostBootMinimum = new Promise((resolve) => {
+                    requestAnimationFrame(() => setTimeout(resolve, 2000))
+                })
+            }
+        </script>
     </body>
 </html>
