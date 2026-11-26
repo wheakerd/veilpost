@@ -1,17 +1,10 @@
 const auth = {
     layout: {
-        meta: '本地控制台',
-        status: '等待身份验证',
-        statusVerify: '等待两步验证',
         footer: '仅限授权管理员访问',
         entering: '正在进入控制台…',
     },
     login: {
-        step: '01 · 账号与密码',
-        // {key} is rendered as a keycap.
-        keyHint: '按 {key} 登录',
         title: '登录控制台',
-        description: '使用你的管理账号继续',
         expired: '登录或验证已过期，请重新登录。',
         retry: '重试连接',
         // {command} is rendered as code.
@@ -23,11 +16,11 @@ const auth = {
         connecting: '正在连接…',
         signingIn: '正在登录…',
         submit: '登录',
-        helpTwoFactor: '启用两步验证的账号将在下一步验证身份',
         helpContact: '无法登录时，请联系控制台管理员',
     },
     verify: {
-        step: '02 · 动态验证码',
+        step: '动态验证码',
+        recoveryStep: '恢复码',
         title: '两步验证',
         totpDescription: '打开验证器，输入当前的 6 位动态验证码',
         recoveryDescription:

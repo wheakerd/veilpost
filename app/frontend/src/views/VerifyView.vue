@@ -90,7 +90,7 @@ async function submit() {
         if (!reduceMotion.value)
             await new Promise((resolve) => setTimeout(resolve, passedHold))
         auth.accept(session)
-        await enterConsole(reduceMotion.value, () =>
+        await enterConsole(() =>
             router.replace(safeReturnPath(route.query.redirect)),
         )
     } catch (cause) {
@@ -138,7 +138,13 @@ async function back() {
 </script>
 
 <template>
-    <p class="auth-step readout">{{ t('auth.verify.step') }}</p>
+    <p class="auth-step readout">
+        {{
+            method === 'totp'
+                ? t('auth.verify.step')
+                : t('auth.verify.recoveryStep')
+        }}
+    </p>
     <h1>{{ t('auth.verify.title') }}</h1>
     <p class="auth-description">
         {{

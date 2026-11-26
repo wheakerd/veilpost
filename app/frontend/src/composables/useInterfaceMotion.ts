@@ -24,9 +24,12 @@ export function useInterfaceMotion() {
 }
 
 // Where each page transition starts; every page springs to rest from here.
-export const pageEnter: Record<PageTransition, Record<string, number>> = {
-    fade: { opacity: 0 },
-    slide: { opacity: 0, x: 20 },
-    zoom: { opacity: 0, scale: 0.97 },
-    rise: { opacity: 0, y: 14 },
+export const pageEnter: Record<
+    PageTransition,
+    { x?: number; y?: number; scale?: number }
+> = {
+    fade: {},
+    slide: { x: 20 },
+    zoom: { scale: 0.97 },
+    rise: { y: 14 },
 }

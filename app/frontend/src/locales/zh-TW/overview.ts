@@ -3,6 +3,7 @@ import type { OverviewMessages } from '../zh-CN/overview'
 export default {
     description: '節點、軟體與憑證的即時狀態',
     viewNodes: '查看 VPN 節點',
+    destinations: '管理入口',
     summary: '運行摘要',
     online: '{online} / {total} 在線',
     ofTotal: '{count} / {total}',

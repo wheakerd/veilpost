@@ -3,6 +3,13 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { I18nT, useI18n } from 'vue-i18n'
 import ArrowRight from '~icons/lucide/arrow-right'
+import ChevronRight from '~icons/lucide/chevron-right'
+import Server from '~icons/lucide/server'
+import Package from '~icons/lucide/package'
+import FileBadge from '~icons/lucide/file-badge'
+import ShieldCheck from '~icons/lucide/shield-check'
+import KeyRound from '~icons/lucide/key-round'
+import SlidersHorizontal from '~icons/lucide/sliders-horizontal'
 import PageIntro from '@/components/PageIntro.vue'
 import { nodesApi, type VpnNode } from '@/api/nodes'
 import { certsApi, type Certificate } from '@/api/certs'
@@ -11,11 +18,33 @@ import { useAppsStore } from '@/stores/apps'
 import { useSessionExpiry } from '@/composables/useSessionExpiry'
 import { formatDate, formatNumber, formatSince } from '@/i18n/format'
 import { useCachedPage } from '@/composables/useCachedPage'
+import { useCatalogText } from '@/composables/useCatalogText'
 
 const { t } = useI18n()
 const router = useRouter()
 const auth = useAuthStore()
 const apps = useAppsStore()
+const catalogText = useCatalogText()
+const destinations = computed(() => [
+    ...apps.installed.map((app) => ({
+        to: `/apps/${app.id}`,
+        icon: Package,
+        title: catalogText(app.name, app.id),
+        description: catalogText(app.description),
+    })),
+    {
+        to: '/dns-providers',
+        icon: KeyRound,
+        title: t('common.routes.dnsProviders'),
+        description: t('certs.dns.description'),
+    },
+    {
+        to: '/settings/appearance',
+        icon: SlidersHorizontal,
+        title: t('common.routes.appearance'),
+        description: t('appearance.description'),
+    },
+])
 const redirectIfExpired = useSessionExpiry()
 const nodes = ref<VpnNode[] | null>(null)
 const certificates = ref<Certificate[] | null>(null)
@@ -66,10 +95,10 @@ function state(node: VpnNode) {
         : ({ tag: 'info', key: 'offline' } as const)
 }
 
-async function load() {
+async function load(background = false) {
     const [nodeResult, certificateResult] = await Promise.allSettled([
-        nodesApi.list({ background: true }),
-        certsApi.listCertificates({ background: true }),
+        nodesApi.list({ background }),
+        certsApi.listCertificates({ background }),
     ])
     for (const result of [nodeResult, certificateResult])
         if (
@@ -85,13 +114,12 @@ async function load() {
 }
 
 onMounted(() => void load())
-useCachedPage({ pause: () => undefined, resume: () => void load() })
+useCachedPage({ pause: () => undefined, resume: () => void load(true) })
 </script>
 
 <template>
     <div>
         <PageIntro
-            :eyebrow="t('common.shell.groups.workspace')"
             :title="t('common.routes.overview')"
             :description="t('overview.description')"
         >
@@ -101,9 +129,16 @@ useCachedPage({ pause: () => undefined, resume: () => void load() })
             /></ElButton>
         </PageIntro>
 
-        <section class="stat-row" :aria-label="t('overview.summary')">
-            <div class="stat">
-                <span>{{ t('overview.stats.nodes') }}</span>
+        <h2 id="overview-summary" class="group-title">
+            {{ t('overview.summary') }}
+        </h2>
+        <section class="stat-row" aria-labelledby="overview-summary">
+            <RouterLink class="stat" to="/nodes">
+                <span class="destination-icon" aria-hidden="true"
+                    ><Server
+                /></span>
+                <span class="stat-label">{{ t('overview.stats.nodes') }}</span>
+                <ChevronRight class="stat-arrow" aria-hidden="true" />
                 <strong
                     v-if="nodeState"
                     class="is-word"
@@ -126,7 +161,7 @@ useCachedPage({ pause: () => undefined, resume: () => void load() })
                         formatNumber(current.length)
                     }}</template>
                 </I18nT>
-                <small>{{
+                <small v-if="nodes && !nodesUnavailable">{{
                     t('overview.stats.nodesDetail', {
                         pending: formatNumber(
                             current.filter((node) => node.status === 'pending')
@@ -134,9 +169,21 @@ useCachedPage({ pause: () => undefined, resume: () => void load() })
                         ),
                     })
                 }}</small>
-            </div>
-            <div class="stat">
-                <span>{{ t('overview.stats.apps') }}</span>
+                <div
+                    v-if="!nodeState"
+                    class="node-coverage"
+                    :style="{
+                        '--node-coverage': `${(online.length / current.length) * 100}%`,
+                    }"
+                    aria-hidden="true"
+                ></div>
+            </RouterLink>
+            <RouterLink class="stat" to="/store">
+                <span class="destination-icon" aria-hidden="true"
+                    ><Package
+                /></span>
+                <span class="stat-label">{{ t('overview.stats.apps') }}</span>
+                <ChevronRight class="stat-arrow" aria-hidden="true" />
                 <I18nT
                     v-if="apps.apps"
                     keypath="overview.ofTotal"
@@ -154,9 +201,15 @@ useCachedPage({ pause: () => undefined, resume: () => void load() })
                     t('common.status.loading')
                 }}</strong>
                 <small>{{ t('overview.stats.appsDetail') }}</small>
-            </div>
-            <div class="stat">
-                <span>{{ t('overview.stats.certificates') }}</span>
+            </RouterLink>
+            <RouterLink class="stat" to="/certificates">
+                <span class="destination-icon" aria-hidden="true"
+                    ><FileBadge
+                /></span>
+                <span class="stat-label">{{
+                    t('overview.stats.certificates')
+                }}</span>
+                <ChevronRight class="stat-arrow" aria-hidden="true" />
                 <strong
                     :class="{
                         'is-word': certificatesUnavailable || !certificates,
@@ -169,27 +222,29 @@ useCachedPage({ pause: () => undefined, resume: () => void load() })
                               : t('common.status.loading')
                     }}</strong
                 >
-                <small>{{
+                <small v-if="certificates && !certificatesUnavailable">{{
                     expiring[0]
                         ? t('overview.stats.nextExpiry', {
                               date: formatDate(expiring[0].notAfter),
                           })
                         : t('overview.stats.noExpiry')
                 }}</small>
-            </div>
-            <div class="stat">
-                <span>{{ t('overview.stats.twoFactor') }}</span>
+            </RouterLink>
+            <RouterLink class="stat" to="/settings/security">
+                <span class="destination-icon" aria-hidden="true"
+                    ><ShieldCheck
+                /></span>
+                <span class="stat-label">{{
+                    t('overview.stats.twoFactor')
+                }}</span>
+                <ChevronRight class="stat-arrow" aria-hidden="true" />
                 <strong class="is-word">{{
                     auth.user?.twoFactorEnabled
                         ? t('overview.stats.enabled')
                         : t('overview.stats.disabled')
                 }}</strong>
-                <small
-                    ><RouterLink to="/settings/security">{{
-                        t('overview.stats.manage')
-                    }}</RouterLink></small
-                >
-            </div>
+                <small>{{ t('overview.stats.manage') }}</small>
+            </RouterLink>
         </section>
 
         <div class="overview-grid">
@@ -203,12 +258,18 @@ useCachedPage({ pause: () => undefined, resume: () => void load() })
                     }}</RouterLink>
                 </div>
                 <div v-if="current.length" class="table-frame">
-                    <table class="data-table">
+                    <table class="data-table overview-node-table">
                         <thead>
                             <tr>
-                                <th>{{ t('overview.nodes.name') }}</th>
-                                <th>{{ t('overview.nodes.status') }}</th>
-                                <th>{{ t('overview.nodes.lastSeen') }}</th>
+                                <th scope="col">
+                                    {{ t('overview.nodes.name') }}
+                                </th>
+                                <th scope="col">
+                                    {{ t('overview.nodes.status') }}
+                                </th>
+                                <th scope="col">
+                                    {{ t('overview.nodes.lastSeen') }}
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -218,11 +279,15 @@ useCachedPage({ pause: () => undefined, resume: () => void load() })
                             >
                                 <td>{{ node.name }}</td>
                                 <td>
-                                    <ElTag :type="state(node).tag">{{
-                                        t(
-                                            `overview.nodes.states.${state(node).key}`,
-                                        )
-                                    }}</ElTag>
+                                    <ElTag
+                                        :type="state(node).tag"
+                                        disable-transitions
+                                        >{{
+                                            t(
+                                                `overview.nodes.states.${state(node).key}`,
+                                            )
+                                        }}</ElTag
+                                    >
                                 </td>
                                 <td class="cell-mono">
                                     {{
@@ -235,11 +300,14 @@ useCachedPage({ pause: () => undefined, resume: () => void load() })
                         </tbody>
                     </table>
                 </div>
+                <p v-else-if="nodesUnavailable" class="panel-empty">
+                    {{ t('overview.nodes.unavailable') }}
+                </p>
                 <p v-else class="panel-empty">
                     {{
-                        nodesUnavailable
-                            ? t('overview.nodes.unavailable')
-                            : t('overview.nodes.empty')
+                        nodes
+                            ? t('overview.nodes.empty')
+                            : t('common.status.loading')
                     }}
                 </p>
             </section>
@@ -259,14 +327,45 @@ useCachedPage({ pause: () => undefined, resume: () => void load() })
                         }}</span>
                     </li>
                 </ul>
+                <p v-else-if="certificatesUnavailable" class="panel-empty">
+                    {{ t('overview.expiry.unavailable') }}
+                </p>
                 <p v-else class="panel-empty">
                     {{
-                        certificatesUnavailable
-                            ? t('overview.expiry.unavailable')
-                            : t('overview.expiry.empty')
+                        certificates
+                            ? t('overview.expiry.empty')
+                            : t('common.status.loading')
                     }}
                 </p>
             </section>
         </div>
+        <section
+            class="overview-destinations"
+            aria-labelledby="destinations-title"
+        >
+            <h2 id="destinations-title" class="group-title">
+                {{ t('overview.destinations') }}
+            </h2>
+            <div class="destination-grid">
+                <RouterLink
+                    v-for="entry in destinations"
+                    :key="entry.to"
+                    :to="entry.to"
+                    class="destination-link"
+                >
+                    <span class="destination-icon" aria-hidden="true"
+                        ><component :is="entry.icon"
+                    /></span>
+                    <span class="destination-copy"
+                        ><strong>{{ entry.title }}</strong
+                        ><span>{{ entry.description }}</span></span
+                    >
+                    <ChevronRight
+                        class="destination-arrow"
+                        aria-hidden="true"
+                    />
+                </RouterLink>
+            </div>
+        </section>
     </div>
 </template>

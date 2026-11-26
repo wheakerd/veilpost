@@ -18,6 +18,34 @@ test.beforeEach(async ({ page, account }) => {
     await page.emulateMedia({ colorScheme: 'light' })
 })
 
+test('global theme variables reach page content and Element Plus controls', async ({
+    page,
+}) => {
+    await page.goto('/settings/appearance')
+    const chip = labelOf(paletteOption(page, '深海蓝'))
+    await expect(chip).toBeVisible()
+    await page.locator('html').evaluate((root) => {
+        root.style.setProperty('--app-primary', 'rgb(35, 83, 165)')
+        root.style.setProperty('--app-font-size-small', '19px')
+        root.style.setProperty('--app-font-size-body', '18px')
+        root.style.setProperty('--app-space-8', '11px')
+        root.style.setProperty('--app-radius-card', '13px')
+        root.style.setProperty('--app-border-width', '3px')
+    })
+    await expect(chip).toHaveCSS('font-size', '19px')
+    await expect(chip).toHaveCSS('border-top-left-radius', '13px')
+    await expect(chip).toHaveCSS('border-top-width', '3px')
+    await expect(chip).toHaveCSS('padding-inline-start', '11px')
+    await expect(chip.locator('.palette-indicator')).toHaveCSS(
+        'background-color',
+        'rgb(35, 83, 165)',
+    )
+    const modes = page.getByRole('radiogroup', { name: '界面外观' })
+    await expect(modes).toHaveCSS('font-size', '18px')
+    await expect(modes).toHaveCSS('border-top-width', '3px')
+    await expect(modes).toHaveCSS('--el-color-primary', 'rgb(35, 83, 165)')
+})
+
 test('the toolbar opens the preferences drawer and changes apply at once', async ({
     page,
     account,
@@ -324,7 +352,7 @@ test('preferences saved under the old key carry over once', async ({
         sessionStorage.setItem('seeded', '1')
         localStorage.setItem(
             'vpn-console:preferences:v1',
-            JSON.stringify({ palette: 'rose', mode: 'dark' }),
+            JSON.stringify({ palette: 'coral', mode: 'dark' }),
         )
     })
     await page.goto('/')
@@ -333,19 +361,30 @@ test('preferences saved under the old key carry over once', async ({
     const keys = await page.evaluate(() => Object.keys(localStorage))
     expect(keys).toEqual([preferencesKey])
     expect(await stored(page)).toMatchObject({
-        palette: 'rose',
+        palette: 'coral',
         mode: 'dark',
     })
+    await page.goto('/settings/appearance')
+    await expect(paletteOption(page, '玫瑰红')).toBeChecked()
+    await page
+        .getByRole('radiogroup', { name: '界面外观' })
+        .getByText('浅色', { exact: true })
+        .click()
+    await expect
+        .poll(() => stored(page))
+        .toMatchObject({
+            palette: 'rose',
+            mode: 'light',
+        })
     await page.evaluate(() => {
         sessionStorage.clear()
     })
 })
 
-// The palette chips of one panel sit in two columns, and no name overflows
-// its capsule. Measured until they rest, since the drawer slides in.
-async function expectTwoColumns(group: Locator) {
+// Measure the cards once the drawer has settled.
+async function expectPaletteColumns(group: Locator, columns: number) {
     const chips = group.locator('label')
-    await expect(chips).toHaveCount(8)
+    await expect(chips).toHaveCount(6)
     await expect
         .poll(() =>
             chips.evaluateAll(
@@ -357,7 +396,7 @@ async function expectTwoColumns(group: Locator) {
                     ).size,
             ),
         )
-        .toBe(2)
+        .toBe(columns)
     expect(
         await chips.evaluateAll((elements) =>
             elements.every(
@@ -367,9 +406,31 @@ async function expectTwoColumns(group: Locator) {
     ).toBe(true)
 }
 
-test('palette chips fit two columns, mark the choice and set the text on the primary', async ({
+async function previewColors(scope: Locator) {
+    return scope
+        .locator('.palette-preview')
+        .evaluateAll((previews) =>
+            previews.map((preview) =>
+                Array.from(
+                    preview.children,
+                    (bar) => getComputedStyle(bar).backgroundColor,
+                ),
+            ),
+        )
+}
+
+async function previewTokens(card: Locator, mode: 'light' | 'dark') {
+    return card.evaluate((element, scheme) => {
+        const style = getComputedStyle(element)
+        return ['primary', 'secondary'].map((role) =>
+            style.getPropertyValue(`--preview-${scheme}-${role}`).trim(),
+        )
+    }, mode)
+}
+
+test('palette cards preview both modes and apply the chosen colors', async ({
     page,
-}) => {
+}, testInfo) => {
     // A palette retired from the list falls back to the default.
     await page.addInitScript((key) => {
         if (sessionStorage.getItem('seeded')) return
@@ -379,6 +440,13 @@ test('palette chips fit two columns, mark the choice and set the text on the pri
     await page.goto('/nodes')
     const html = page.locator('html')
     await expect(html).toHaveAttribute('data-theme', 'abyss')
+    const activeColors = () =>
+        html.evaluate((root) => {
+            const style = getComputedStyle(root)
+            return ['--app-primary', '--app-secondary'].map((token) =>
+                style.getPropertyValue(token).trim(),
+            )
+        })
     const createNode = page.getByRole('button', {
         name: '创建节点',
         exact: true,
@@ -388,13 +456,20 @@ test('palette chips fit two columns, mark the choice and set the text on the pri
             const { backgroundColor, color } = getComputedStyle(element)
             return { backgroundColor, color }
         })
-    const abyssLight = await buttonColors()
+    const defaultLight = await buttonColors()
 
     await page.getByRole('button', { name: '偏好设置' }).click()
     const drawer = page.getByRole('dialog', { name: '偏好设置' })
     await expect(drawer).toBeVisible()
     const group = drawer.getByRole('radiogroup', { name: '主题色' })
-    await expectTwoColumns(group)
+    await expectPaletteColumns(group, 2)
+    const samples = await previewColors(group)
+    expect(samples).toHaveLength(12)
+    for (const sample of samples) {
+        expect(sample).toHaveLength(2)
+        expect(new Set(sample).size).toBe(2)
+        expect(sample).not.toContain('rgba(0, 0, 0, 0)')
+    }
     const chosen = group.getByRole('radio', { name: '深海蓝', exact: true })
     await expect(chosen).toBeChecked()
     await expect(labelOf(chosen).locator('svg')).toBeVisible()
@@ -403,36 +478,68 @@ test('palette chips fit two columns, mark the choice and set the text on the pri
             group.getByRole('radio', { name: '晴空蓝', exact: true }),
         ).locator('svg'),
     ).toHaveCount(0)
-    const swatch = labelOf(chosen).locator('.palette-swatch')
-    // White on the blue-violet, ink on the amber.
-    await expect(swatch).toHaveCSS('color', 'rgb(255, 255, 255)')
+    await expect(labelOf(chosen).locator('.palette-indicator')).toHaveCSS(
+        'color',
+        'rgb(11, 13, 17)',
+    )
     const amber = group.getByRole('radio', { name: '琥珀橙', exact: true })
     await tick(amber)
     await expect(html).toHaveAttribute('data-theme', 'amber')
-    await expect(labelOf(amber).locator('.palette-swatch')).toHaveCSS(
+    const amberCard = labelOf(amber)
+    const amberLightTokens = await previewTokens(amberCard, 'light')
+    const amberDarkTokens = await previewTokens(amberCard, 'dark')
+    expect(amberLightTokens).not.toEqual(amberDarkTokens)
+    expect(await activeColors()).toEqual(amberLightTokens)
+    const amberPreviews = await previewColors(amberCard)
+    expect(amberPreviews[0]).not.toEqual(amberPreviews[1])
+    await expect(amberCard.locator('.palette-indicator')).toHaveCSS(
         'color',
-        'rgb(18, 20, 24)',
+        'rgb(11, 13, 17)',
     )
     expect(await stored(page)).toMatchObject({ palette: 'amber' })
     await page.keyboard.press('Escape')
     await expect(drawer).toBeHidden()
-    await expect.poll(buttonColors).not.toEqual(abyssLight)
+    await expect.poll(buttonColors).not.toEqual(defaultLight)
 
     const amberLight = await buttonColors()
     await page.emulateMedia({ colorScheme: 'dark' })
     await expect(html).toHaveClass(/\bdark\b/)
     await expect.poll(buttonColors).not.toEqual(amberLight)
+    expect(await activeColors()).toEqual(amberDarkTokens)
 
-    // On a 320px screen the preferences page still holds two columns.
+    await page.goto('/settings/appearance')
+    const pageGroup = page.getByRole('radiogroup', { name: '主题色' })
+    const pageAmber = paletteOption(page, '琥珀橙')
+    await expect(pageAmber).toBeChecked()
+    await expect(labelOf(pageAmber).locator('.palette-indicator')).toHaveCSS(
+        'color',
+        'rgb(11, 13, 17)',
+    )
+    expect(await previewColors(labelOf(pageAmber))).toEqual(amberPreviews)
+    await pageGroup.locator('xpath=..').screenshot({
+        path: testInfo.outputPath('palettes-dark.png'),
+        animations: 'disabled',
+    })
+    await page.emulateMedia({ colorScheme: 'light' })
+    await expect(html).not.toHaveClass(/\bdark\b/)
+    await pageGroup.locator('xpath=..').screenshot({
+        path: testInfo.outputPath('palettes-light.png'),
+        animations: 'disabled',
+    })
+
     await page.setViewportSize({ width: 320, height: 720 })
     await page.goto('/settings/appearance')
-    await expectTwoColumns(page.getByRole('radiogroup', { name: '主题色' }))
+    await expectPaletteColumns(pageGroup, 2)
     expect(
         await page.evaluate(
             () => document.documentElement.scrollWidth <= window.innerWidth,
         ),
     ).toBe(true)
-    await expect(paletteOption(page, '琥珀橙')).toBeChecked()
+    await page.evaluate(() => {
+        document.documentElement.style.fontSize = '200%'
+    })
+    await expectPaletteColumns(pageGroup, 1)
+    await expect(pageAmber).toBeChecked()
     await page.evaluate(() => {
         sessionStorage.clear()
     })

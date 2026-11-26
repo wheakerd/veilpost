@@ -3,63 +3,73 @@
 
 .store-note {
     color: var(--app-text-secondary);
-    font-size: 0.8125rem;
-    margin-top: 0.5rem;
+    font-size: var(--app-font-size-small);
+    margin-top: var(--app-space-8);
 }
 .app-list {
     list-style: none;
-    margin: 1.25rem -1.5rem 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+    align-items: stretch;
+    gap: var(--app-space-12);
+    margin: var(--app-space-16) 0 0;
     padding: 0;
-    border-top: 1px solid var(--app-border);
 }
 .app-item {
-    display: grid;
-    gap: 0.75rem;
-    padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid var(--app-border);
-    &:last-child {
-        border-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-space-16);
+    padding: var(--app-space-20);
+    > :last-child {
+        margin-top: auto;
     }
     .node-action {
         align-items: center;
+        flex-wrap: wrap;
     }
 }
 .app-heading {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--app-space-12);
     min-width: 0;
-    .el-tag {
-        flex-shrink: 0;
-    }
+}
+.app-settings-heading {
+    flex-wrap: wrap;
+}
+:root .app-status.el-tag {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 .app-title {
     display: grid;
-    gap: 0.125rem;
+    gap: var(--app-space-2);
     min-width: 0;
-    flex: 1;
+    flex: 1 1 auto;
     h3 {
         margin: 0;
-        font-size: 0.9375rem;
+        font-size: var(--app-font-size-subheading);
         overflow-wrap: anywhere;
     }
     small {
         color: var(--app-muted);
-        font: 0.75rem var(--app-mono-font);
+        font: var(--app-font-size-caption) var(--app-mono-font);
     }
 }
 .app-description {
     color: var(--app-text-secondary);
-    font-size: 0.8125rem;
+    font-size: var(--app-font-size-small);
     line-height: 1.7;
     max-width: 52rem;
 }
 .app-meta {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
-    gap: 0.75rem 1.5rem;
+    gap: var(--app-space-12) var(--app-space-24);
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--app-font-size-caption);
     > div {
         min-width: 0;
     }
@@ -67,10 +77,10 @@
         color: var(--app-muted);
     }
     dd {
-        margin: 0.25rem 0 0;
+        margin: var(--app-space-4) 0 0;
         display: flex;
         flex-wrap: wrap;
-        gap: 0.25rem 0.75rem;
+        gap: var(--app-space-4) var(--app-space-12);
         overflow-wrap: anywhere;
     }
     .app-image {
@@ -82,43 +92,58 @@
         word-break: break-all;
     }
     a {
-        color: var(--app-primary);
+        color: var(--app-accent-text);
     }
 }
 .app-chip {
     font-family: var(--app-mono-font);
     color: var(--app-text);
-    white-space: nowrap;
+    overflow-wrap: anywhere;
 }
 .app-manage-link {
     display: inline-flex;
     align-items: center;
-    font-size: 0.8125rem;
-    font-weight: 500;
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-medium);
 }
 
 .app-panel + .app-panel {
-    margin-top: 1rem;
+    margin-top: var(--app-space-16);
+}
+.app-panel {
+    container-type: inline-size;
 }
 .app-settings {
     max-width: 36rem;
-    margin-top: 1.25rem;
+    margin-top: var(--app-space-20);
     input[aria-invalid='true'],
     select[aria-invalid='true'] {
         border-color: var(--app-danger);
     }
 }
+@container (min-width: 46rem) {
+    .app-settings {
+        max-width: none;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+        > :not(.form-field),
+        > .form-field:has(.el-textarea) {
+            grid-column: 1 / -1;
+        }
+    }
+}
 .field-required {
-    margin-left: 0.5rem;
+    margin-left: var(--app-space-8);
     color: var(--app-muted);
-    font: 400 0.6875rem var(--app-mono-font);
+    font: var(--app-font-weight-regular) var(--app-font-size-fine)
+        var(--app-mono-font);
     vertical-align: middle;
 }
 .secret-state {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--app-space-8);
     .el-button + .el-button {
         margin-left: 0;
     }
@@ -131,19 +156,19 @@
 }
 .deploy-state {
     position: relative;
-    border-top: 1px solid var(--app-border);
-    padding-top: 1.25rem;
-    margin-top: 1.25rem;
+    border-top: var(--app-border-width) solid var(--app-border);
+    padding-top: var(--app-space-20);
+    margin-top: var(--app-space-20);
     display: grid;
-    gap: 0.75rem;
+    gap: var(--app-space-12);
     justify-items: start;
     h3 {
         margin: 0;
-        font-size: 0.875rem;
+        font-size: var(--app-font-size-body);
     }
     p {
         color: var(--app-text-secondary);
-        font-size: 0.8125rem;
+        font-size: var(--app-font-size-small);
         max-width: 40rem;
     }
     form {
@@ -159,16 +184,7 @@
 }
 
 @media (max-width: 47.5rem) {
-    .app-list {
-        margin-inline: calc(-1 * min(1rem, 4vw));
-    }
     .app-item {
-        padding-inline: min(1rem, 4vw);
-    }
-    // Secondary destinations read as quiet links beside the brand row.
-    .installed-link {
-        min-height: 2.75rem;
-        padding: 0 0.5rem;
-        font-size: 0.8125rem;
+        padding-inline: min(var(--app-space-16), 4vw);
     }
 }

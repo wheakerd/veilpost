@@ -63,7 +63,6 @@ const common = {
     },
     loading: {
         title: '正在载入控制台',
-        description: '正在恢复你的登录状态，请稍候。',
     },
     notFound: {
         title: '这个页面不存在',
@@ -83,8 +82,6 @@ const common = {
     password: {
         label: '密码',
         current: '当前密码',
-        show: '显示',
-        hide: '隐藏',
         showLabel: '显示密码',
         hideLabel: '隐藏密码',
         capsLock: '大写锁定已开启',

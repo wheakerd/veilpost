@@ -3,6 +3,7 @@ import type { OverviewMessages } from '../zh-CN/overview'
 export default {
     description: 'Текущее состояние узлов, программ и сертификатов',
     viewNodes: 'Открыть узлы VPN',
+    destinations: 'Управление',
     summary: 'Сводка',
     online: 'в сети: {online} из {total}',
     ofTotal: '{count} из {total}',

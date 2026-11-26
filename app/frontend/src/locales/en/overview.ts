@@ -3,6 +3,7 @@ import type { OverviewMessages } from '../zh-CN/overview'
 export default {
     description: 'Live status of nodes, software and certificates',
     viewNodes: 'View VPN nodes',
+    destinations: 'Management',
     summary: 'Summary',
     online: '{online} / {total} online',
     ofTotal: '{count} / {total}',

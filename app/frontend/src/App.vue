@@ -22,13 +22,12 @@ import PanelLeftOpen from '~icons/lucide/panel-left-open'
 import RotateCw from '~icons/lucide/rotate-cw'
 import Languages from '~icons/lucide/languages'
 import X from '~icons/lucide/x'
-import ChevronDown from '~icons/lucide/chevron-down'
 import SlidersHorizontal from '~icons/lucide/sliders-horizontal'
 import elementZhCn from 'element-plus/es/locale/lang/zh-cn'
 import elementZhTw from 'element-plus/es/locale/lang/zh-tw'
 import elementEn from 'element-plus/es/locale/lang/en'
 import elementRu from 'element-plus/es/locale/lang/ru'
-import { animate, motion, MotionConfig } from 'motion-v'
+import { animate, MotionConfig } from 'motion-v'
 import { usePreferencesStore } from '@/stores/preferences'
 import { useAuthStore } from '@/stores/auth'
 import { useAppsStore } from '@/stores/apps'
@@ -42,7 +41,7 @@ import {
     type Locale,
 } from '@/i18n'
 import { formatClock } from '@/i18n/format'
-import type { RouteTitle } from '@/router'
+import { navigationPending, type RouteTitle } from '@/router'
 import { readScroll } from '@/router/pageCache'
 import AuthLayout from '@/components/AuthLayout.vue'
 import RouteContent from '@/components/RouteContent.vue'
@@ -79,19 +78,16 @@ const motionPreference = computed(() =>
     preferences.reducedMotion ? 'always' : 'user',
 )
 const elementLocale = computed(() => elementLocales[currentLocale.value])
-const collapsed = computed(() => preferences.sidebarCollapsed === true)
 const version = __APP_VERSION__
 
-type Group = 'workspace' | 'software' | 'security' | 'settings'
+const sidebarGroupKeys = ['workspace', 'software', 'security'] as const
+type Group = (typeof sidebarGroupKeys)[number]
 interface NavItem {
     to: string
     title: RouteTitle
     icon: Component
-    group: Group
-    // Narrow screens keep four items in the bottom bar; the rest move to the
-    // row below the brand.
-    desktopOnly?: boolean
-    mobileOnly?: boolean
+    group?: Group
+    mobileShortcut?: boolean
 }
 const navigation: NavItem[] = [
     { to: '/', title: 'overview', icon: Overview, group: 'workspace' },
@@ -101,21 +97,21 @@ const navigation: NavItem[] = [
         title: 'store',
         icon: Store,
         group: 'software',
-        desktopOnly: true,
+        mobileShortcut: true,
     },
     {
         to: '/certificates',
         title: 'certificates',
         icon: FileBadge,
         group: 'security',
-        desktopOnly: true,
+        mobileShortcut: true,
     },
     {
         to: '/dns-providers',
         title: 'dnsProviders',
         icon: KeyRound,
         group: 'security',
-        desktopOnly: true,
+        mobileShortcut: true,
     },
     {
         to: '/settings/security',
@@ -127,27 +123,22 @@ const navigation: NavItem[] = [
         to: '/settings/appearance',
         title: 'appearance',
         icon: Palette,
-        group: 'settings',
-        mobileOnly: true,
     },
 ]
-const groups: Group[] = ['workspace', 'software', 'security', 'settings']
-function groupNavigation(items: NavItem[]) {
-    return groups
-        .map((group) => ({
-            group,
-            items: items.filter((item) => item.group === group),
-        }))
-        .filter((entry) => entry.items.length > 0)
-}
-const navGroups = groupNavigation(navigation)
-const sidebarNavigation = navigation.filter((item) => !item.mobileOnly)
-const sidebarGroups = groupNavigation(sidebarNavigation)
-const sidebarGroupKeys = sidebarGroups.map((entry) => entry.group)
+const sidebarNavigation = navigation.filter((item) => item.group !== undefined)
+const sidebarGroups = sidebarGroupKeys.map((group) => ({
+    group,
+    items: sidebarNavigation.filter((item) => item.group === group),
+}))
+const mobileTabs = navigation.filter((item) => !item.mobileShortcut)
+const mobileShortcuts = navigation.filter((item) => item.mobileShortcut)
 
 // Narrow screens use the bottom bar, where groups do not fold.
 const narrowQuery = window.matchMedia('(max-width: 47.5rem)')
 const narrow = ref(narrowQuery.matches)
+const collapsed = computed(
+    () => !narrow.value && preferences.sidebarCollapsed === true,
+)
 const onNarrowChange = (event: MediaQueryListEvent) => {
     narrow.value = event.matches
 }
@@ -163,15 +154,6 @@ function openGroup(group: Group) {
     openGroups.value = preferences.navMultiple
         ? new Set([...openGroups.value, group])
         : new Set([group])
-}
-function toggleGroup(group: Group) {
-    if (!openGroups.value.has(group)) {
-        openGroup(group)
-        return
-    }
-    const next = new Set(openGroups.value)
-    next.delete(group)
-    openGroups.value = next
 }
 // The desktop sidebar is an Element Plus menu; its open groups follow
 // openGroups both ways.
@@ -194,9 +176,6 @@ watch(openGroups, (open) => {
         else menu.value?.close(group)
 })
 
-function groupFolded(group: Group) {
-    return !narrow.value && !collapsed.value && !openGroups.value.has(group)
-}
 watch(
     () => [route.path, preferences.navMultiple] as const,
     ([path, multiple], previous) => {
@@ -334,21 +313,30 @@ const sheetDrag = useSheetDrag({
     },
 })
 
-// The top progress bar follows navigation and foreground requests.
-const navigating = ref(false)
-const stopBefore = router.beforeEach(() => {
-    navigating.value = true
-})
-const stopAfter = router.afterEach(() => {
-    navigating.value = false
-})
-const stopError = router.onError(() => {
-    navigating.value = false
-})
-const showProgress = computed(
+const contentBusy = computed(
+    () => navigationPending.value || authActivity.pending > 0,
+)
+const progressPending = computed(
     () =>
         preferences.progressBar &&
-        (navigating.value || authActivity.pending > 0),
+        route.matched.length > 0 &&
+        contentBusy.value,
+)
+const showProgress = ref(false)
+// Only the indicator waits. Navigation and requests run as soon as they start.
+watch(
+    progressPending,
+    (pending, _, onCleanup) => {
+        if (!pending) {
+            showProgress.value = false
+            return
+        }
+        const timer = setTimeout(() => (showProgress.value = true), 150)
+        onCleanup(() => {
+            clearTimeout(timer)
+        })
+    },
+    { flush: 'post' },
 )
 
 // The sidebar lists installed apps; the catalog lives only in memory and
@@ -428,9 +416,6 @@ onBeforeUnmount(() => {
     clearInterval(clock)
     document.removeEventListener('scroll', onScroll, { capture: true })
     narrowQuery.removeEventListener('change', onNarrowChange)
-    stopBefore()
-    stopAfter()
-    stopError()
 })
 </script>
 
@@ -449,7 +434,7 @@ onBeforeUnmount(() => {
             }}</a>
             <AuthLayout v-if="route.meta.authPage"><RouteContent /></AuthLayout>
             <div
-                v-else-if="auth.user"
+                v-else-if="auth.user && route.matched.length"
                 class="app-shell"
                 :class="{
                     'is-collapsed': collapsed,
@@ -539,12 +524,20 @@ onBeforeUnmount(() => {
                                     :aria-label="t('common.shell.refresh')"
                                     @click="refreshKey++"
                                 >
-                                    <RotateCw aria-hidden="true" />
+                                    <RotateCw
+                                        class="refresh-icon"
+                                        :style="{
+                                            '--refresh-turn': `${refreshKey}turn`,
+                                        }"
+                                        aria-hidden="true"
+                                    />
                                 </button>
                             </ElTooltip>
                             <ElTooltip
                                 :content="mode.label.value"
                                 placement="bottom"
+                                :trigger="['hover', 'focus']"
+                                :trigger-keys="[]"
                                 :show-after="300"
                             >
                                 <button
@@ -677,6 +670,8 @@ onBeforeUnmount(() => {
                                     :key="item.to"
                                     :content="t(`common.routes.${item.title}`)"
                                     placement="right"
+                                    :trigger="['hover', 'focus']"
+                                    :trigger-keys="[]"
                                     :show-after="200"
                                 >
                                     <ElMenuItem :index="item.to">
@@ -697,110 +692,47 @@ onBeforeUnmount(() => {
                             </template>
                         </ElMenu>
                     </nav>
-                    <motion.nav
+                    <nav
                         v-if="narrow"
-                        v-glass="{ enabled: narrow }"
+                        v-glass
                         class="primary-nav"
                         :aria-label="t('common.shell.navigation')"
-                        layout-root
                     >
                         <span
-                            v-if="narrow"
                             ref="tabLens"
                             v-glass="{ material: false, depth: 10, scale: 8 }"
                             class="tab-lens"
                             aria-hidden="true"
                         ></span>
-                        <div
-                            v-for="entry in navGroups"
-                            :key="entry.group"
-                            class="nav-group"
-                            :class="{ folded: groupFolded(entry.group) }"
-                        >
-                            <button
-                                type="button"
-                                class="nav-group-label"
-                                :aria-expanded="!groupFolded(entry.group)"
-                                :aria-controls="`nav-group-${entry.group}`"
-                                @click="toggleGroup(entry.group)"
-                            >
-                                <span>{{
-                                    t(`common.shell.groups.${entry.group}`)
-                                }}</span>
-                                <ChevronDown aria-hidden="true" />
-                            </button>
-                            <div
-                                :id="`nav-group-${entry.group}`"
-                                class="nav-group-items"
-                                :inert="groupFolded(entry.group)"
-                            >
-                                <div class="nav-group-inner">
-                                    <ElTooltip
-                                        v-for="item in entry.items"
-                                        :key="item.to"
-                                        :content="
-                                            t(`common.routes.${item.title}`)
-                                        "
-                                        placement="right"
-                                        :disabled="!collapsed"
-                                        :show-after="200"
-                                    >
-                                        <RouterLink
-                                            :to="item.to"
-                                            class="nav-link"
-                                            :class="{
-                                                'desktop-only':
-                                                    item.desktopOnly,
-                                            }"
-                                            :aria-label="
-                                                collapsed
-                                                    ? t(
-                                                          `common.routes.${item.title}`,
-                                                      )
-                                                    : undefined
-                                            "
-                                        >
-                                            <motion.span
-                                                v-if="route.path === item.to"
-                                                class="nav-selection"
-                                                :layout-id="
-                                                    reduceMotion
-                                                        ? undefined
-                                                        : 'navigation-selection'
-                                                "
-                                                :transition="transition"
-                                                aria-hidden="true"
-                                            />
-                                            <component
-                                                :is="item.icon"
-                                                aria-hidden="true"
-                                            />
-                                            <span class="nav-label">{{
-                                                t(`common.routes.${item.title}`)
-                                            }}</span>
-                                        </RouterLink>
-                                    </ElTooltip>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.nav>
-                    <div class="sidebar-apps">
                         <RouterLink
-                            v-for="item in navigation.filter(
-                                (entry) => entry.desktopOnly,
-                            )"
+                            v-for="item in mobileTabs"
                             :key="item.to"
                             :to="item.to"
-                            class="nav-link installed-link mobile-only"
+                            class="nav-link"
                         >
                             <component :is="item.icon" aria-hidden="true" />
                             <span class="nav-label">{{
                                 t(`common.routes.${item.title}`)
                             }}</span>
                         </RouterLink>
+                    </nav>
+                    <div class="sidebar-apps">
+                        <template v-if="narrow">
+                            <RouterLink
+                                v-for="item in mobileShortcuts"
+                                :key="item.to"
+                                :to="item.to"
+                                class="nav-link installed-link"
+                            >
+                                <component :is="item.icon" aria-hidden="true" />
+                                <span class="nav-label">{{
+                                    t(`common.routes.${item.title}`)
+                                }}</span>
+                            </RouterLink>
+                        </template>
                         <span
                             v-if="apps.installed.length"
-                            class="nav-group-label installed-caption"
+                            class="installed-caption"
                             aria-hidden="true"
                             >{{ t('common.shell.installedApps') }}</span
                         >
@@ -814,6 +746,8 @@ onBeforeUnmount(() => {
                                 :key="app.id"
                                 :content="catalogText(app.name, app.id)"
                                 placement="right"
+                                :trigger="['hover', 'focus']"
+                                :trigger-keys="[]"
                                 :disabled="!collapsed"
                                 :show-after="200"
                             >
@@ -835,7 +769,7 @@ onBeforeUnmount(() => {
                         </nav>
                     </div>
                     <div
-                        v-if="!collapsed"
+                        v-if="!narrow && !collapsed"
                         class="sidebar-resizer"
                         role="separator"
                         tabindex="0"
@@ -914,7 +848,7 @@ onBeforeUnmount(() => {
                     <main
                         id="main-content"
                         tabindex="-1"
-                        :aria-busy="authActivity.pending > 0"
+                        :aria-busy="contentBusy"
                     >
                         <RouteContent :refresh-key="refreshKey" />
                     </main>
@@ -948,16 +882,14 @@ onBeforeUnmount(() => {
                             >
                         </div>
                     </template>
-                    <PreferencesPanel id-prefix="drawer-preferences" />
+                    <PreferencesPanel
+                        id-prefix="drawer-preferences"
+                        section-heading="h3"
+                    />
                 </ElDrawer>
             </div>
-            <main
-                v-else
-                id="main-content"
-                class="session-loading"
-                aria-busy="true"
-            >
-                <LoadingState />
+            <main v-else id="main-content" class="session-loading">
+                <LoadingState :title="t('common.loading.title')" />
             </main>
         </MotionConfig>
     </ElConfigProvider>

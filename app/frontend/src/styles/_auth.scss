@@ -1,191 +1,455 @@
-// Sign-in: the globe fills the screen, the card sits on it, and the frame
-// carries mono readouts like an instrument display.
 .auth-shell {
-    position: relative;
+    --auth-edge: clamp(1.25rem, 4vw, 3rem);
+    --auth-target-size: max(44px, 2.75rem);
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr auto;
     min-height: 100dvh;
-    overflow: hidden;
-    background-color: var(--app-bg);
-    background-image:
-        linear-gradient(var(--app-grid) 1px, transparent 1px),
-        linear-gradient(90deg, var(--app-grid) 1px, transparent 1px);
-    background-size: 32px 32px;
-}
-.lab-globe {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-}
-.frame-corner {
-    position: absolute;
-    width: 16px;
-    height: 16px;
-    border: 0 solid var(--app-border-strong);
-    pointer-events: none;
-    &.top-left {
-        top: 12px;
-        left: 12px;
-        border-width: 1px 0 0 1px;
-    }
-    &.top-right {
-        top: 12px;
-        right: 12px;
-        border-width: 1px 1px 0 0;
-    }
-    &.bottom-left {
-        bottom: 12px;
-        left: 12px;
-        border-width: 0 0 1px 1px;
-    }
-    &.bottom-right {
-        bottom: 12px;
-        right: 12px;
-        border-width: 0 1px 1px 0;
-    }
+    background: var(--app-surface);
 }
 .auth-top,
 .auth-bottom {
-    position: relative;
-    z-index: 1;
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
-    align-items: flex-start;
-    gap: 1rem;
-    padding: 2rem 2.5rem;
+    align-items: center;
+    gap: var(--app-space-8) var(--app-space-16);
+    padding-inline: var(--auth-edge);
+}
+.auth-top {
+    column-gap: var(--app-space-8);
+    margin: var(--app-space-8);
+    padding: max(var(--app-space-8), env(safe-area-inset-top))
+        var(--app-space-12) var(--app-space-8);
+    border: var(--app-border-width) solid var(--app-card-border);
+    border-radius: var(--app-radius-pane);
+    background: var(--app-card-surface);
 }
 .auth-bottom {
-    align-items: center;
-    padding-block: 1.5rem;
-    > span {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
+    padding-block: var(--app-space-16)
+        max(var(--app-space-16), env(safe-area-inset-bottom));
+    color: var(--app-muted);
+    font-size: var(--app-font-size-small);
 }
 .auth-brand {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    column-gap: 0.625rem;
+    display: flex;
     align-items: center;
+    gap: var(--app-space-10);
     img {
-        border-radius: 6px;
+        display: block;
     }
     strong {
-        font-weight: 500;
-        font-size: 1rem;
-    }
-    p {
-        grid-column: 1 / -1;
-        margin-top: 0.75rem;
+        font: var(--app-font-weight-strong) var(--app-font-size-brand)/1.2
+            var(--app-font);
     }
 }
 .auth-tools {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--app-space-8);
 }
-.segmented {
+.auth-languages {
     display: inline-flex;
+    flex-wrap: wrap;
     gap: 2px;
     padding: 2px;
-    border: 1px solid var(--app-border-strong);
-    border-radius: 8px;
-    background: var(--app-surface);
+    border: var(--app-border-width) solid var(--app-border);
+    border-radius: var(--app-radius-inset);
     button {
-        min-width: 2.25rem;
-        height: 2rem;
-        padding: 0 0.5rem;
+        position: relative;
+        min-inline-size: var(--auth-target-size);
+        min-block-size: var(--auth-target-size);
+        padding: 0 var(--app-space-8);
         border: 0;
-        border-radius: var(--app-radius-control);
+        border-radius: var(--app-radius-segment);
         background: transparent;
         color: var(--app-text-secondary);
-        font: 400 0.75rem/1 var(--app-mono-font);
-        transition:
-            background-color 140ms var(--app-ease),
-            color 140ms var(--app-ease);
-        &:hover {
-            color: var(--app-text);
-        }
+        font: var(--app-font-weight-medium) var(--app-font-size-small)/1
+            var(--app-font);
         &[aria-pressed='true'] {
-            background: var(--app-raised);
             color: var(--app-text);
-            box-shadow: inset 0 0 0 1px var(--app-border-strong);
         }
     }
 }
-.icon-button.framed {
-    width: 2.25rem;
-    height: 2.25rem;
-    border: 1px solid var(--app-border-strong);
+.auth-language-selection {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
     background: var(--app-surface);
+    box-shadow: inset 0 0 0 var(--app-border-width) var(--app-border-strong);
+    pointer-events: none;
 }
-main.auth-main {
+.auth-language-label {
     position: relative;
     z-index: 1;
-    display: grid;
-    place-items: center;
-    padding: 1rem 1.5rem;
-    max-width: none;
 }
-.auth-card {
-    position: relative;
-    width: 100%;
-    max-width: 25rem;
-    padding: 2rem;
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-panel);
-    background: var(--app-surface);
-    box-shadow: var(--app-chrome-shadow);
-    overflow: hidden;
-    > .hazard-strip {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 5rem;
+.auth-tools .auth-mode {
+    width: var(--auth-target-size);
+    height: var(--auth-target-size);
+    border: var(--app-border-width) solid var(--app-border);
+    border-radius: var(--app-radius-tool);
+    transition: none;
+    &:active {
+        transform: none;
     }
-    h1 {
-        font-size: 1.5rem;
+}
+@media (width < 42rem) {
+    .auth-brand {
+        gap: var(--app-space-6);
+        img {
+            width: 1.625rem;
+            height: auto;
+        }
+        strong {
+            font-size: var(--app-font-size-base);
+        }
+    }
+    .auth-tools {
+        gap: var(--app-space-6);
+    }
+    .auth-languages {
+        gap: 0;
+    }
+}
+main.auth-main {
+    display: grid;
+    justify-content: center;
+    grid-template-columns: minmax(0, 30rem);
+    align-content: start;
+    padding: clamp(2.5rem, 6dvh, 4rem) var(--auth-edge);
+}
+.auth-panel {
+    display: grid;
+    min-width: 0;
+}
+.auth-access {
+    position: relative;
+    min-width: 0;
+    align-self: center;
+}
+.auth-art {
+    display: none;
+}
+.auth-card .route-content {
+    margin-inline: 0;
+}
+.auth-card h1 {
+    font: var(--app-font-weight-strong) var(--app-font-size-auth-title) / 1.14
+        var(--app-font);
+    letter-spacing: -0.035em;
+    overflow-wrap: anywhere;
+}
+.auth-notices {
+    display: grid;
+    justify-items: start;
+    gap: var(--app-space-10);
+    margin-top: var(--app-space-24);
+    .form-notice {
+        width: 100%;
+    }
+}
+.auth-card .form-field .el-input {
+    --el-input-height: 3.25rem;
+    --el-input-bg-color: var(--app-raised);
+}
+.auth-card .form-field label {
+    font-size: var(--app-font-size-body);
+    font-weight: var(--app-font-weight-semibold);
+}
+.auth-card .auth-form {
+    margin-top: var(--app-space-32);
+}
+.login-form {
+    container-type: inline-size;
+}
+.login-fields {
+    border: var(--app-border-width) solid var(--app-border-strong);
+    border-radius: var(--app-radius-group);
+    overflow: hidden;
+    &:focus-within {
+        border-color: var(--app-accent-text);
+        box-shadow: 0 0 0 var(--app-border-width-accent) var(--app-primary-soft);
+    }
+}
+:root .login-fields {
+    .form-field {
+        --field-fill: var(--app-field-surface);
+        position: relative;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+        padding: var(--app-space-10) var(--app-space-16) var(--app-space-8)
+            3.125rem;
+        background: var(--field-fill);
+        & + .form-field {
+            border-block-start: var(--app-border-width) solid var(--app-border);
+        }
+        &:has(.password-toggle) {
+            padding-inline-end: calc(
+                var(--auth-target-size) + var(--app-space-12)
+            );
+        }
+        &:has(:is(:autofill, :-webkit-autofill)) {
+            --field-fill: var(--app-raised);
+        }
+        &:focus-within {
+            box-shadow: inset var(--app-border-width-accent) 0
+                var(--app-accent-text);
+        }
+    }
+    .field-label-row {
+        flex-wrap: wrap;
+        gap: 0 var(--app-space-8);
+        > label {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+    }
+    label {
+        font-size: var(--app-font-size-small);
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+        color: var(--app-text-secondary);
+        &::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            cursor: text;
+        }
+        span {
+            display: inline-block;
+            transform-origin: left center;
+            transition:
+                transform 160ms var(--app-ease),
+                color 160ms var(--app-ease);
+        }
+    }
+    .form-field:not(:focus-within):has(input:placeholder-shown):not(
+            :has(:is(:autofill, :-webkit-autofill))
+        )
+        label
+        span {
+        color: var(--app-text);
+        transform: translateY(0.75rem) scale(var(--empty-label-scale, 1.14));
+    }
+    .el-input {
+        position: static;
+        width: 100%;
+        --el-input-height: 1.625rem;
+        --el-input-bg-color: transparent;
+    }
+    .el-input__wrapper {
+        padding: 0;
+        border-radius: 0;
+        overflow: visible;
+        background: transparent;
+        box-shadow: none !important;
+        transform: none;
+    }
+    .el-input__inner {
+        position: relative;
+        min-width: 0;
+        height: 1.625rem;
+        font-size: var(--app-font-size-base);
+        line-height: 1.625;
+    }
+    .el-input__prefix,
+    .el-input__suffix {
+        position: absolute;
+        inset-block: 0;
+        align-items: center;
+    }
+    .el-input__prefix {
+        inset-inline-start: 1rem;
+        color: var(--app-muted);
+        &,
+        .el-input__prefix-inner {
+            pointer-events: none;
+        }
+        svg {
+            width: 1.125rem;
+            height: 1.125rem;
+            margin: 0;
+        }
+    }
+    .el-input__suffix {
+        inset-inline-end: 0.375rem;
+    }
+    .password-toggle {
+        width: var(--auth-target-size);
+        height: var(--auth-target-size);
+        margin: 0;
+    }
+}
+@container (max-width: 16rem) {
+    :root .login-fields {
+        --auth-target-size: max(44px, 1.75rem);
+        --empty-label-scale: 1;
+        .form-field {
+            padding-inline-start: var(--app-space-12);
+        }
+        .el-input__prefix {
+            display: none;
+        }
+    }
+}
+:root .login-form .form-submit {
+    position: relative;
+    padding-inline: 3rem;
+    font-size: var(--app-font-size-base);
+    font-weight: var(--app-font-weight-semibold);
+    .button-icon {
+        position: absolute;
+        inset-inline-end: 1.25rem;
+        margin: 0;
+    }
+}
+.login-form + .auth-help {
+    margin-top: var(--app-space-18);
+    padding-top: 0;
+    border: 0;
+}
+@keyframes auth-form-enter {
+    from {
+        opacity: 0;
+        transform: translateY(1rem);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+@media (prefers-reduced-motion: no-preference) {
+    :root:not([data-reduced-motion='true']) .auth-card .auth-form {
+        animation: auth-form-enter 280ms var(--app-ease) 55ms backwards;
+    }
+}
+:root .auth-card .form-submit.el-button {
+    min-height: 3.25rem;
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    :root:not([data-reduced-motion='true']) .auth-card .form-submit {
+        .button-icon {
+            transition: transform 160ms var(--app-ease);
+        }
+        &:hover:not(:disabled, .is-loading) .button-icon {
+            transform: translateX(0.25rem);
+        }
+        &:active:not(:disabled, .is-loading) .button-icon {
+            transform: translateX(0.125rem);
+            transition-duration: 100ms;
+        }
     }
 }
 .auth-step {
-    margin-bottom: 0.75rem;
+    margin-bottom: var(--app-space-12);
+}
+@media (min-width: 42rem) {
+    .auth-shell {
+        background: var(--app-backdrop);
+    }
+    main.auth-main {
+        grid-template-columns: minmax(0, 33rem);
+        align-content: center;
+    }
+    .auth-panel {
+        background: var(--app-card-surface);
+        border: var(--app-border-width) solid var(--app-card-border);
+        border-radius: var(--app-radius-auth-panel);
+        box-shadow: var(--app-card-shadow);
+    }
+    .auth-access {
+        padding: 2.75rem;
+    }
+}
+@media (min-width: 58rem) {
+    main.auth-main {
+        grid-template-columns: minmax(0, 54rem);
+    }
+    .auth-panel {
+        grid-template-columns: minmax(0, 1fr) 18rem;
+        padding: var(--app-space-10);
+    }
+    .auth-access {
+        padding: 2.5rem 3rem;
+    }
+    .auth-art {
+        position: relative;
+        display: grid;
+        place-items: center;
+        min-block-size: 25rem;
+        overflow: hidden;
+        border-radius: var(--app-radius-inset);
+        background: linear-gradient(
+            145deg,
+            var(--app-art-light),
+            var(--app-art-mid) 44%,
+            var(--app-art-low)
+        );
+        &::before {
+            position: absolute;
+            inset: 0.875rem;
+            border: var(--app-border-width) solid var(--app-art-seam);
+            border-radius: var(--app-radius-card);
+            content: '';
+        }
+    }
+    .auth-art-mark {
+        display: grid;
+        place-items: center;
+        width: 61%;
+        max-width: 11rem;
+        aspect-ratio: 1;
+        border: var(--app-border-width) solid var(--app-art-seam);
+        border-radius: var(--app-radius-brand-tile);
+        background: linear-gradient(
+            145deg,
+            var(--app-art-light),
+            var(--app-art-mid) 65%,
+            var(--app-art-low)
+        );
+        box-shadow:
+            inset 0 1px 0 var(--app-art-highlight),
+            0 0.5rem 0 -0.15rem var(--app-art-edge),
+            0.5rem 1.25rem 2rem -0.6rem var(--app-art-shadow);
+        transform: rotate(-11deg);
+        img {
+            display: block;
+            width: 73%;
+            height: auto;
+            // The tile in the favicon becomes white, leaving the mark on metal.
+            filter: var(--app-art-mark-filter);
+            mix-blend-mode: var(--app-art-mark-blend);
+            opacity: var(--app-art-mark-opacity);
+        }
+    }
+}
+@media (prefers-contrast: more) {
+    .auth-panel,
+    .auth-languages,
+    .auth-tools .auth-mode {
+        border-color: var(--app-border-strong);
+    }
+    .auth-languages button[aria-pressed='true'] {
+        box-shadow: inset 0 0 0 var(--app-border-width)
+            var(--app-text-secondary);
+    }
 }
 .auth-description {
     color: var(--app-text-secondary);
-    margin-top: 0.5rem;
+    margin-top: var(--app-space-8);
 }
 .auth-form {
     display: grid;
-    gap: 1.25rem;
-    margin-top: 1.5rem;
-}
-.key-hint {
-    margin-top: -0.5rem;
-    text-align: center;
-    font-size: 0.75rem;
-    color: var(--app-muted);
-}
-kbd {
-    display: inline-block;
-    min-width: 1.5rem;
-    padding: 1px 6px;
-    margin-inline: 2px;
-    border: 1px solid var(--app-border-strong);
-    border-bottom-width: 2px;
-    border-radius: 4px;
-    background: var(--app-raised);
-    color: var(--app-text);
-    font: 400 0.6875rem/1.5 var(--app-mono-font);
+    gap: var(--app-space-20);
+    margin-top: var(--app-space-24);
 }
 .form-field {
     display: grid;
-    gap: 0.375rem;
+    gap: var(--app-space-6);
     label {
-        font-size: 0.8125rem;
-        font-weight: 500;
+        font-size: var(--app-font-size-small);
+        font-weight: var(--app-font-weight-medium);
     }
     // Element Plus controls fill the field at the 40px form height.
     .el-input,
@@ -198,34 +462,91 @@ kbd {
     }
     small {
         color: var(--app-muted);
-        font-size: 0.75rem;
+        font-size: var(--app-font-size-caption);
     }
 }
 // The show/hide toggle is a real, labelled button inside the field.
 .password-field {
     .el-input__wrapper {
-        padding-right: 0.25rem;
+        padding-right: var(--app-space-4);
+        overflow: hidden;
     }
     .el-input__suffix-inner {
         height: 100%;
     }
 }
+// Autofill paint belongs to the field surface, including the space beside the eye.
+:is(.login-fields, .password-field)
+    .el-input__inner:is(:autofill, :-webkit-autofill) {
+    box-shadow: inset 0 0 0 2rem
+        var(--field-fill, var(--el-input-bg-color, var(--app-surface)));
+    -webkit-text-fill-color: var(--app-text);
+    caret-color: var(--app-text);
+}
+@media (forced-colors: active) {
+    .login-fields .form-field:focus-within {
+        outline: var(--app-focus-width) solid Highlight;
+        outline-offset: calc(-1 * var(--app-focus-offset));
+    }
+    :is(.login-fields, .password-field)
+        .el-input__inner:is(:autofill, :-webkit-autofill) {
+        -webkit-text-fill-color: FieldText;
+    }
+}
 .password-toggle {
+    display: inline-grid;
+    place-items: center;
     align-self: center;
     height: calc(100% - 0.5rem);
     min-width: 2.75rem;
-    padding-inline: 0.625rem;
+    padding: 0;
     border: 0;
-    border-radius: 4px;
+    border-radius: var(--app-radius-capsule);
     background: transparent;
-    color: var(--app-primary);
-    font-size: 0.75rem;
-    &:hover {
-        background: var(--app-raised);
+    color: var(--app-muted);
+    svg {
+        width: 1.125rem;
+        height: 1.125rem;
+    }
+    &[aria-pressed='true'] {
+        color: var(--app-accent-text);
     }
     &:focus-visible {
-        outline: 2px solid var(--app-primary);
-        outline-offset: -2px;
+        outline: var(--app-focus-width) solid var(--app-accent-text);
+        outline-offset: calc(-1 * var(--app-focus-offset));
+    }
+}
+.auth-card .password-toggle {
+    height: calc(100% - 0.25rem);
+    min-width: var(--auth-target-size);
+    min-height: var(--auth-target-size);
+}
+@media (hover: hover) and (pointer: fine) {
+    .auth-languages button:hover {
+        color: var(--app-text);
+    }
+    .password-toggle:hover {
+        background: var(--app-raised);
+    }
+    .auth-card .password-toggle:hover {
+        background: var(--app-surface);
+    }
+}
+:is(
+        .auth-languages button,
+        .auth-tools .auth-mode,
+        .password-toggle
+    ):active:not(:focus-visible, :disabled) {
+    background: var(--app-primary-soft);
+}
+@media (prefers-reduced-motion: no-preference) {
+    :root:not([data-reduced-motion='true'])
+        :is(.auth-tools .auth-mode, .password-toggle) {
+        transition: transform 160ms var(--app-ease);
+        &:active:not(:focus-visible, :disabled) {
+            transform: scale(0.97);
+            transition-duration: 100ms;
+        }
     }
 }
 .form-submit.el-button {
@@ -235,39 +556,37 @@ kbd {
 .form-error,
 .form-notice {
     border-radius: var(--app-radius-control);
-    padding: 0.625rem 0.75rem;
-    font-size: 0.8125rem;
+    padding: var(--app-space-10) var(--app-space-12);
+    font-size: var(--app-font-size-small);
     overflow-wrap: anywhere;
 }
 .form-error {
     color: var(--app-danger);
     background: var(--app-danger-soft);
-    border: 1px solid var(--app-danger-border);
+    border: var(--app-border-width) solid var(--app-danger-border);
 }
 .form-notice {
     color: var(--app-text-secondary);
     background: var(--app-raised);
-    border: 1px solid var(--app-border);
-}
-.auth-card > .form-notice {
-    margin-top: 1rem;
+    border: var(--app-border-width) solid var(--app-border);
 }
 .auth-help {
-    margin-top: 1.25rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--app-border);
-    font-size: 0.75rem;
+    margin-top: var(--app-space-24);
+    padding-top: var(--app-space-18);
+    border-top: var(--app-border-width) solid var(--app-border);
+    font-size: var(--app-font-size-body);
     color: var(--app-muted);
-    line-height: 1.8;
+    line-height: 1.55;
 }
 .verification-window {
-    margin-top: 1rem;
+    margin-top: var(--app-space-16);
     color: var(--app-muted);
-    font-size: 0.75rem;
+    font-size: var(--app-font-size-caption);
     strong {
         color: var(--app-text);
-        font: 500 0.75rem var(--app-mono-font);
-        margin-left: 0.375rem;
+        font: var(--app-font-weight-medium) var(--app-font-size-caption)
+            var(--app-mono-font);
+        margin-left: var(--app-space-6);
     }
 }
 .verification-input input {
@@ -276,9 +595,21 @@ kbd {
 }
 .auth-alternatives {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
-    gap: 0.75rem;
-    margin-top: 1.25rem;
+    gap: var(--app-space-4) var(--app-space-12);
+    margin-top: var(--app-space-12);
+}
+:root .auth-alternatives .el-button {
+    height: auto;
+    min-height: 2.75rem;
+    max-width: 100%;
+    text-align: start;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    & + .el-button {
+        margin-inline-start: 0;
+    }
 }
 .session-loading {
     display: grid;
@@ -288,15 +619,12 @@ kbd {
 }
 
 // Account security
-.security-panel {
-    max-width: 56rem;
-}
 .security-panel + .security-panel {
-    margin-top: 1rem;
+    margin-top: var(--app-space-16);
 }
 .field-hint {
-    margin-top: -0.75rem;
-    font-size: 0.75rem;
+    margin-top: calc(-1 * var(--app-space-12));
+    font-size: var(--app-font-size-caption);
     color: var(--app-muted);
 }
 .security-summary p.recovery-low {
@@ -308,15 +636,21 @@ kbd {
 .security-heading {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--app-space-12);
+}
+.security-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-space-4) var(--app-space-12);
 }
 .security-icon {
     display: grid;
     place-items: center;
     width: 2.25rem;
     height: 2.25rem;
-    border-radius: 8px;
-    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-medium);
+    border: var(--app-border-width) solid var(--app-border);
     background: var(--app-raised);
     color: var(--app-text-secondary);
     flex-shrink: 0;
@@ -325,14 +659,14 @@ kbd {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 2rem;
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--app-border);
+    gap: var(--app-space-32);
+    margin-top: var(--app-space-24);
+    padding-top: var(--app-space-24);
+    border-top: var(--app-border-width) solid var(--app-border);
     p {
         color: var(--app-text-secondary);
-        font-size: 0.8125rem;
-        margin-top: 0.5rem;
+        font-size: var(--app-font-size-small);
+        margin-top: var(--app-space-8);
         max-width: 34rem;
     }
 }
@@ -342,47 +676,47 @@ kbd {
 .form-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: var(--app-space-8);
     .el-button + .el-button {
         margin-left: 0;
     }
 }
 .setup-content,
 .recovery-content {
-    border-top: 1px solid var(--app-border);
-    padding-top: 1.5rem;
-    margin-top: 1.5rem;
+    border-top: var(--app-border-width) solid var(--app-border);
+    padding-top: var(--app-space-24);
+    margin-top: var(--app-space-24);
 }
 .setup-steps {
-    padding-left: 1.5rem;
+    padding-left: var(--app-space-24);
     margin-block: 0;
     li {
-        padding-left: 0.375rem;
+        padding-left: var(--app-space-6);
         &::marker {
             color: var(--app-muted);
             font-family: var(--app-mono-font);
         }
     }
     h3 {
-        font-size: 0.9375rem;
+        font-size: var(--app-font-size-subheading);
         margin: 0;
     }
     p {
-        margin-top: 0.375rem;
+        margin-top: var(--app-space-6);
         color: var(--app-text-secondary);
-        font-size: 0.8125rem;
+        font-size: var(--app-font-size-small);
     }
 }
 .setup-credentials {
     display: grid;
     grid-template-columns: minmax(0, 16rem) minmax(0, 1fr);
     align-items: center;
-    gap: 1.5rem;
+    gap: var(--app-space-24);
     background: var(--app-raised);
-    border: 1px solid var(--app-border);
+    border: var(--app-border-width) solid var(--app-border);
     border-radius: var(--app-radius-card);
-    padding: 1.25rem;
-    margin-block: 1.25rem 1.5rem;
+    padding: var(--app-space-20);
+    margin-block: var(--app-space-20) var(--app-space-24);
     max-width: 43rem;
 }
 .setup-qr {
@@ -392,15 +726,15 @@ kbd {
     height: auto;
     aspect-ratio: 1;
     object-fit: contain;
-    background: white;
-    border-radius: 6px;
+    background: var(--app-qr-paper);
+    border-radius: var(--app-radius-small);
     image-rendering: pixelated;
 }
 .setup-instructions {
     display: grid;
     min-width: 0;
-    gap: 0.75rem;
-    font-size: 0.8125rem;
+    gap: var(--app-space-12);
+    font-size: var(--app-font-size-small);
     color: var(--app-text-secondary);
     p {
         margin: 0;
@@ -408,10 +742,10 @@ kbd {
 }
 .setup-account {
     display: grid;
-    gap: 0.25rem;
+    gap: var(--app-space-4);
     strong {
         color: var(--app-text);
-        font-weight: 500;
+        font-weight: var(--app-font-weight-medium);
         overflow-wrap: anywhere;
     }
 }
@@ -420,23 +754,23 @@ kbd {
     summary {
         min-height: 2.25rem;
         align-content: center;
-        color: var(--app-primary);
+        color: var(--app-accent-text);
         cursor: pointer;
-        border-radius: 4px;
+        border-radius: var(--app-radius-tight);
     }
     .setup-key {
-        margin-top: 0.5rem;
+        margin-top: var(--app-space-8);
     }
 }
 .setup-key {
     display: grid;
-    gap: 0.5rem;
+    gap: var(--app-space-8);
     min-width: 0;
     flex: 1;
-    font-size: 0.75rem;
+    font-size: var(--app-font-size-caption);
     color: var(--app-muted);
     code {
-        font-size: 0.9375rem;
+        font-size: var(--app-font-size-subheading);
         line-height: 1.8;
         color: var(--app-text);
         overflow-wrap: anywhere;
@@ -444,86 +778,66 @@ kbd {
     }
     .el-button {
         justify-self: start;
-        margin-top: 0.25rem;
+        margin-top: var(--app-space-4);
     }
 }
 .recovery-content > p {
     color: var(--app-text-secondary);
-    margin-top: 0.5rem;
+    margin-top: var(--app-space-8);
     max-width: 37.5rem;
 }
 .recovery-codes {
     list-style: none;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem;
+    gap: var(--app-space-8);
     max-width: 30rem;
-    padding: 1rem;
+    padding: var(--app-space-16);
     background: var(--app-raised);
-    border: 1px solid var(--app-border);
+    border: var(--app-border-width) solid var(--app-border);
     border-radius: var(--app-radius-card);
     code {
-        font-size: 0.8125rem;
+        font-size: var(--app-font-size-small);
         overflow-wrap: anywhere;
         user-select: all;
     }
 }
 .save-confirmation {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--app-space-8);
     align-items: center;
-    margin-block: 1.25rem;
+    margin-block: var(--app-space-20);
     input {
         width: 1rem;
         height: 1rem;
-        accent-color: var(--app-primary);
+        accent-color: var(--app-accent-text);
     }
 }
 .security-feedback {
-    margin-top: 1.25rem;
+    margin-top: var(--app-space-20);
 }
 
 @media (max-width: 47.5rem) {
-    .auth-top {
-        padding: max(1.25rem, env(safe-area-inset-top)) min(1.25rem, 5vw) 0;
-        flex-direction: column;
-        gap: 1rem;
-    }
-    .auth-bottom {
-        padding: 1rem min(1.25rem, 5vw);
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.25rem;
-    }
-    main.auth-main {
-        padding: 1.5rem min(1.25rem, 5vw);
-    }
-    .auth-card {
-        padding: 1.75rem min(1.25rem, 5vw);
-    }
-    .frame-corner {
-        display: none;
-    }
     .security-summary {
         align-items: flex-start;
         flex-direction: column;
-        gap: 1rem;
+        gap: var(--app-space-16);
     }
     .security-panel > .setting-heading {
         align-items: flex-start;
-        gap: 0.5rem;
+        gap: var(--app-space-8);
     }
     .setup-credentials {
         grid-template-columns: minmax(0, 1fr);
-        gap: 1rem;
-        padding: 1rem;
+        gap: var(--app-space-16);
+        padding: var(--app-space-16);
     }
     .setup-qr {
         justify-self: center;
     }
     .recovery-codes {
-        padding: 0.75rem;
-        font-size: 0.75rem;
+        padding: var(--app-space-12);
+        font-size: var(--app-font-size-caption);
     }
 }
 
@@ -534,12 +848,18 @@ kbd {
     z-index: 100;
     overflow: hidden;
     pointer-events: none;
+    animation: boot-appear 120ms var(--app-ease) both;
     span {
         display: block;
-        width: 35%;
+        width: 30%;
         height: 100%;
-        background: var(--app-primary);
-        animation: request-travel 1s var(--app-ease) infinite;
+        background: linear-gradient(
+            90deg,
+            transparent,
+            var(--app-primary) 35% 65%,
+            transparent
+        );
+        animation: request-travel 950ms linear infinite;
     }
 }
 @keyframes request-travel {
@@ -547,56 +867,47 @@ kbd {
         transform: translateX(-100%);
     }
     to {
-        transform: translateX(390%);
+        transform: translateX(334%);
     }
 }
 .loading-state {
-    width: min(100%, 25rem);
-    padding: 2rem;
-    text-align: center;
-    border-radius: var(--app-radius-panel);
-    border: 1px solid var(--app-border);
-    background: var(--app-surface);
-    box-shadow: var(--app-shadow);
-    h1 {
-        margin-top: 1.25rem;
-        font-size: 1.25rem;
-    }
-    p {
-        margin-top: 0.5rem;
-        color: var(--app-text-secondary);
-    }
-}
-.loading-ring {
-    display: inline-block;
-    width: 1.75rem;
-    height: 1.75rem;
-    border: 2px solid var(--app-border-strong);
-    border-top-color: var(--app-primary);
-    border-radius: 50%;
-    animation: loading-turn 0.8s linear infinite;
-}
-@keyframes loading-turn {
-    to {
-        transform: rotate(360deg);
-    }
-}
-.loading-lines {
     display: grid;
-    gap: 0.75rem;
-    margin-top: 1.5rem;
-    span {
-        height: 0.5rem;
-        background: var(--app-raised);
-        border-radius: 4px;
+    justify-items: center;
+    gap: var(--app-space-18);
+    text-align: center;
+    animation: boot-appear 160ms var(--app-ease) 120ms both;
+    .boot-indicator {
+        display: grid;
+        justify-items: center;
+        gap: var(--app-space-14);
+        width: 4rem;
+        color: var(--app-accent-text);
+        &::after {
+            content: '';
+            width: 100%;
+            height: 2px;
+            border-radius: var(--app-radius-group);
+            background: currentColor;
+            animation: boot-pulse 900ms ease-in-out infinite alternate;
+        }
     }
-    span:last-child {
-        width: 65%;
-        margin-inline: auto;
+}
+@keyframes boot-appear {
+    from {
+        opacity: 0;
+    }
+}
+@keyframes boot-pulse {
+    from {
+        opacity: 0.45;
+        transform: scaleX(0.4);
+    }
+    to {
+        opacity: 1;
+        transform: scaleX(1);
     }
 }
 .retry-connection {
-    margin-top: 0.75rem;
     max-width: 100%;
     height: auto;
     white-space: normal;
@@ -606,22 +917,18 @@ kbd {
     }
 }
 .setup-required {
-    margin-top: 1rem;
     code {
         user-select: all;
     }
 }
 :root[data-reduced-motion='true'] .request-progress span {
     width: 100%;
-    animation: none;
+    background: var(--app-primary);
 }
 @media (prefers-reduced-motion: reduce) {
     .request-progress span {
         width: 100%;
-        animation: none;
-    }
-    .loading-ring {
-        animation: none;
+        background: var(--app-primary);
     }
 }
 
@@ -632,14 +939,14 @@ kbd {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 0.75rem;
+    gap: var(--app-space-12);
 }
 .field-status {
     color: var(--app-warning);
-    font-size: 0.75rem;
+    font-size: var(--app-font-size-caption);
 }
 .auth-card .form-field:focus-within label {
-    color: var(--app-primary);
+    color: var(--app-accent-text);
 }
 .auth-card .form-field label {
     transition: color 180ms var(--app-ease);
@@ -668,7 +975,7 @@ kbd {
     inset: 0;
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 0.5rem;
+    gap: var(--app-space-8);
     pointer-events: none;
 }
 // Cells take a primary hairline as digits arrive; the next one is marked
@@ -676,20 +983,21 @@ kbd {
 .code-cell {
     display: grid;
     place-items: center;
-    border: 1px solid var(--app-border-strong);
-    border-radius: 1rem;
+    border: var(--app-border-width) solid var(--app-border-strong);
+    border-radius: var(--app-radius-group);
     background: var(--app-button-fill);
-    font: 500 1.25rem var(--app-mono-font);
+    font: var(--app-font-weight-medium) var(--app-font-size-title)
+        var(--app-mono-font);
     transition:
         border-color 180ms var(--app-ease),
         box-shadow 180ms var(--app-ease);
     &.filled {
-        border-color: color-mix(in srgb, var(--app-primary) 60%, transparent);
+        border-color: var(--app-code-filled-border);
     }
 }
 .code-field:focus-within .code-cell.current {
-    border-color: var(--app-primary);
-    box-shadow: 0 0 0 3px var(--app-primary-soft);
+    border-color: var(--app-accent-text);
+    box-shadow: 0 0 0 var(--app-border-width-accent) var(--app-primary-soft);
 }
 // While the code is checked a wave runs through the cells in reading order;
 // when it passes, each lifts once.
@@ -721,45 +1029,27 @@ kbd {
     }
 }
 
-// Entering the console: the column dissolves, the globe gathers behind the
-// status line, and the console takes over.
-.auth-card {
-    transition:
-        opacity 260ms var(--app-ease),
-        filter 260ms var(--app-ease),
-        transform 260ms var(--app-ease);
-}
-.auth-main {
-    position: relative;
+// A confirmed sign-in hands the form area over to its status.
+.auth-card,
+.auth-entering {
+    transition: opacity 180ms var(--app-ease);
 }
 .auth-entering {
     position: absolute;
-    top: 50%;
-    left: 50%;
+    inset: 50% 0 auto;
     margin: 0;
     color: var(--app-text-secondary);
-    white-space: nowrap;
-    transform: translate(-50%, -50%);
+    text-align: center;
+    overflow-wrap: anywhere;
+    transform: translateY(-50%);
     opacity: 0;
     pointer-events: none;
-    transition: opacity 260ms 120ms var(--app-ease);
-}
-.lab-globe {
-    transition:
-        transform 560ms var(--app-ease),
-        filter 560ms var(--app-ease);
 }
 .auth-shell.is-entering {
     .auth-card {
         opacity: 0;
-        filter: blur(6px);
-        transform: scale(0.98);
     }
     .auth-entering {
         opacity: 1;
-    }
-    .lab-globe {
-        transform: scale(0.6);
-        filter: brightness(1.35);
     }
 }

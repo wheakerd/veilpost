@@ -3,12 +3,14 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Check from '~icons/lucide/check'
 import { usePreferencesStore } from '@/stores/preferences'
+import { useModeToggle } from '@/composables/useModeToggle'
 import {
     glassDefaults,
     pageTransitions,
     palettes,
     sidebarWidth,
     visions,
+    type ColorMode,
 } from '@/theme/palettes'
 import { browserLocale, isLocale, localeName, supportedLocales } from '@/i18n'
 import { formatNumber } from '@/i18n/format'
@@ -16,7 +18,13 @@ import DisabledReason from '@/components/DisabledReason.vue'
 
 // Shared by the preferences drawer and the preferences page; every change
 // applies at once and is saved in this browser only.
-const props = defineProps<{ idPrefix: string }>()
+const props = withDefaults(
+    defineProps<{ idPrefix: string; sectionHeading?: 'h2' | 'h3' }>(),
+    { sectionHeading: 'h2' },
+)
+const itemHeading = computed(() =>
+    props.sectionHeading === 'h2' ? 'h3' : 'h4',
+)
 const { t } = useI18n()
 const preferences = usePreferencesStore()
 const id = (name: string) => `${props.idPrefix}-${name}`
@@ -28,8 +36,18 @@ const language = computed({
         preferences.locale = isLocale(value) ? value : undefined
     },
 })
+const paletteSchemes = ['light', 'dark'] as const
+const { setMode } = useModeToggle()
+let modePress: PointerEvent | undefined
+const selectedMode = computed({
+    get: () => preferences.mode,
+    set: (value: ColorMode) => {
+        setMode(value, modePress)
+        modePress = undefined
+    },
+})
 const modeOptions = computed(() =>
-    (['light', 'dark', 'system'] as const).map((value) => ({
+    ([...paletteSchemes, 'system'] as const).map((value) => ({
         value,
         label: t(`appearance.mode.${value}`),
     })),
@@ -67,50 +85,73 @@ const switches = [
 <template>
     <div class="preferences">
         <section class="preference-section" :aria-labelledby="id('palette')">
-            <h3 :id="id('palette')">{{ t('appearance.palette.title') }}</h3>
+            <component :is="sectionHeading" :id="id('palette')">
+                {{ t('appearance.palette.title') }}
+            </component>
+            <p :id="id('palette-preview')" class="preference-hint">
+                {{ t('appearance.palette.preview') }}
+            </p>
             <div
                 class="palette-chips"
                 role="radiogroup"
                 :aria-labelledby="id('palette')"
+                :aria-describedby="id('palette-preview')"
             >
                 <label
                     v-for="palette in palettes"
-                    :key="palette.id"
+                    :key="palette"
                     class="palette-chip"
-                    :class="{ selected: preferences.palette === palette.id }"
+                    :class="{ selected: preferences.palette === palette }"
+                    :data-palette="palette"
                 >
                     <input
                         v-model="preferences.palette"
                         class="visually-hidden"
                         type="radio"
                         :name="id('palette')"
-                        :value="palette.id"
+                        :value="palette"
                     />
-                    <span
-                        class="palette-swatch"
-                        :style="{ '--palette-swatch': palette.primary }"
-                        aria-hidden="true"
-                        ><Check v-if="preferences.palette === palette.id"
-                    /></span>
-                    <span class="palette-name">{{
-                        t(`appearance.palettes.${palette.id}.name`)
-                    }}</span>
+                    <span class="palette-heading">
+                        <span class="palette-name">{{
+                            t(`appearance.palettes.${palette}.name`)
+                        }}</span>
+                        <span class="palette-indicator" aria-hidden="true">
+                            <Check v-if="preferences.palette === palette" />
+                        </span>
+                    </span>
+                    <span class="palette-previews" aria-hidden="true">
+                        <span
+                            v-for="scheme in paletteSchemes"
+                            :key="scheme"
+                            class="palette-preview"
+                            :class="`palette-preview--${scheme}`"
+                        >
+                            <span class="palette-primary"></span>
+                            <span class="palette-secondary"></span>
+                        </span>
+                    </span>
                 </label>
             </div>
         </section>
 
         <section class="preference-section" :aria-labelledby="id('mode')">
-            <h3 :id="id('mode')">{{ t('appearance.mode.title') }}</h3>
+            <component :is="sectionHeading" :id="id('mode')">
+                {{ t('appearance.mode.title') }}
+            </component>
             <ElSegmented
-                v-model="preferences.mode"
+                v-model="selectedMode"
                 block
                 :options="modeOptions"
                 :aria-label="t('appearance.mode.title')"
+                @pointerdown="modePress = $event"
+                @keydown="modePress = undefined"
             />
         </section>
 
         <section class="preference-section" :aria-labelledby="id('vision')">
-            <h3 :id="id('vision')">{{ t('appearance.vision.title') }}</h3>
+            <component :is="sectionHeading" :id="id('vision')">
+                {{ t('appearance.vision.title') }}
+            </component>
             <ElSegmented
                 v-model="preferences.vision"
                 block
@@ -123,7 +164,9 @@ const switches = [
         </section>
 
         <section class="preference-section" :aria-labelledby="id('glass')">
-            <h3 :id="id('glass')">{{ t('appearance.glass.title') }}</h3>
+            <component :is="sectionHeading" :id="id('glass')">
+                {{ t('appearance.glass.title') }}
+            </component>
             <div class="glass-row">
                 <span class="glass-label">{{
                     t('appearance.glass.tint')
@@ -173,9 +216,9 @@ const switches = [
         </section>
 
         <section class="preference-section" :aria-labelledby="id('transition')">
-            <h3 :id="id('transition')">
+            <component :is="sectionHeading" :id="id('transition')">
                 {{ t('appearance.transition.title') }}
-            </h3>
+            </component>
             <div
                 class="transition-grid"
                 role="radiogroup"
@@ -221,10 +264,14 @@ const switches = [
             class="preference-section preference-list"
             :aria-labelledby="id('layout')"
         >
-            <h3 :id="id('layout')">{{ t('appearance.layout.title') }}</h3>
+            <component :is="sectionHeading" :id="id('layout')">
+                {{ t('appearance.layout.title') }}
+            </component>
             <div class="preference-item">
                 <div>
-                    <h4>{{ t('appearance.layout.sidebarWidth.title') }}</h4>
+                    <component :is="itemHeading">
+                        {{ t('appearance.layout.sidebarWidth.title') }}
+                    </component>
                     <p>{{ widthText }}</p>
                 </div>
                 <DisabledReason
@@ -245,9 +292,9 @@ const switches = [
             </div>
             <div v-for="name in switches" :key="name" class="preference-item">
                 <div>
-                    <h4>
+                    <component :is="itemHeading">
                         {{ t(`appearance.layout.${name}.title`) }}
-                    </h4>
+                    </component>
                     <p>{{ t(`appearance.layout.${name}.description`) }}</p>
                 </div>
                 <ElSwitch
@@ -257,9 +304,9 @@ const switches = [
             </div>
             <div class="preference-item wraps">
                 <div>
-                    <h4>
+                    <component :is="itemHeading">
                         {{ t('appearance.language.title') }}
-                    </h4>
+                    </component>
                     <p>{{ t('appearance.language.description') }}</p>
                 </div>
                 <ElSelect

@@ -295,7 +295,6 @@ onBeforeUnmount(() => {
 <template>
     <div>
         <PageIntro
-            :eyebrow="t('common.shell.groups.security')"
             :title="t('common.routes.dnsProviders')"
             :description="t('certs.dns.description')"
         >
@@ -470,14 +469,11 @@ onBeforeUnmount(() => {
                 <li
                     v-for="credential in credentials"
                     :key="credential.id"
-                    class="node-item cert-item"
+                    class="node-item"
                     :data-credential-id="credential.id"
                 >
                     <div class="node-summary">
-                        <span
-                            class="node-dot is-online"
-                            aria-hidden="true"
-                        ></span>
+                        <Key class="credential-icon" aria-hidden="true" />
                         <div class="node-name">
                             <strong>{{
                                 credentialLabel(
@@ -490,30 +486,69 @@ onBeforeUnmount(() => {
                             }}</small>
                         </div>
                     </div>
-                    <dl class="node-meta">
-                        <div>
-                            <dt>{{ t('certs.dns.meta.updatedAt') }}</dt>
-                            <dd>{{ formatDateTime(credential.updatedAt) }}</dd>
-                        </div>
-                        <div>
-                            <dt>{{ t('certs.dns.meta.usage') }}</dt>
-                            <dd>
-                                {{
-                                    credential.certificates
-                                        ? t(
-                                              'certs.dns.meta.usedBy',
-                                              {
-                                                  count: formatNumber(
-                                                      credential.certificates,
-                                                  ),
-                                              },
-                                              credential.certificates,
-                                          )
-                                        : t('certs.dns.meta.unused')
-                                }}
-                            </dd>
-                        </div>
-                    </dl>
+                    <div class="credential-details">
+                        <dl class="node-meta">
+                            <div>
+                                <dt>{{ t('certs.dns.meta.updatedAt') }}</dt>
+                                <dd>
+                                    {{ formatDateTime(credential.updatedAt) }}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt>{{ t('certs.dns.meta.usage') }}</dt>
+                                <dd>
+                                    {{
+                                        credential.certificates
+                                            ? t(
+                                                  'certs.dns.meta.usedBy',
+                                                  {
+                                                      count: formatNumber(
+                                                          credential.certificates,
+                                                      ),
+                                                  },
+                                                  credential.certificates,
+                                              )
+                                            : t('certs.dns.meta.unused')
+                                    }}
+                                </dd>
+                            </div>
+                        </dl>
+                        <ul
+                            class="secret-status"
+                            :aria-label="
+                                credentialLabel(
+                                    credential.name,
+                                    credential.provider,
+                                )
+                            "
+                        >
+                            <li
+                                v-for="field in providerFields[
+                                    credential.provider
+                                ]"
+                                :key="field.name"
+                                :data-field="field.name"
+                            >
+                                <span>{{
+                                    t(`certs.dns.fields.${field.name}`)
+                                }}</span>
+                                <ElTag
+                                    :type="
+                                        isSet(credential, field.name)
+                                            ? 'success'
+                                            : 'info'
+                                    "
+                                    effect="plain"
+                                    size="small"
+                                    >{{
+                                        isSet(credential, field.name)
+                                            ? t('certs.dns.status.set')
+                                            : t('certs.dns.status.unset')
+                                    }}</ElTag
+                                >
+                            </li>
+                        </ul>
+                    </div>
                     <Reveal>
                         <div
                             v-if="
@@ -533,45 +568,13 @@ onBeforeUnmount(() => {
                                 @click="openEdit(credential)"
                                 >{{ t('certs.dns.edit') }}</ElButton
                             ><ElButton
+                                type="danger"
                                 :disabled="busy"
                                 @click="openDelete(credential)"
                                 >{{ t('certs.dns.delete.open') }}</ElButton
                             >
                         </div>
                     </Reveal>
-                    <ul
-                        class="secret-status"
-                        :aria-label="
-                            credentialLabel(
-                                credential.name,
-                                credential.provider,
-                            )
-                        "
-                    >
-                        <li
-                            v-for="field in providerFields[credential.provider]"
-                            :key="field.name"
-                            :data-field="field.name"
-                        >
-                            <span>{{
-                                t(`certs.dns.fields.${field.name}`)
-                            }}</span>
-                            <ElTag
-                                :type="
-                                    isSet(credential, field.name)
-                                        ? 'success'
-                                        : 'info'
-                                "
-                                effect="plain"
-                                size="small"
-                                >{{
-                                    isSet(credential, field.name)
-                                        ? t('certs.dns.status.set')
-                                        : t('certs.dns.status.unset')
-                                }}</ElTag
-                            >
-                        </li>
-                    </ul>
                     <Reveal>
                         <form
                             v-if="

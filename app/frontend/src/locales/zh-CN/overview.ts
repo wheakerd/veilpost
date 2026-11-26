@@ -1,6 +1,7 @@
 const overview = {
     description: '节点、软件与证书的实时状态',
     viewNodes: '查看 VPN 节点',
+    destinations: '管理入口',
     summary: '运行摘要',
     online: '{online} / {total} 在线',
     ofTotal: '{count} / {total}',

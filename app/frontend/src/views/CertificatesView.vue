@@ -390,7 +390,6 @@ onBeforeUnmount(() => {
 <template>
     <div>
         <PageIntro
-            :eyebrow="t('common.shell.groups.security')"
             :title="t('common.routes.certificates')"
             :description="t('certs.certificates.description')"
         >
@@ -618,34 +617,47 @@ onBeforeUnmount(() => {
                 }}
             </p>
 
-            <div v-if="certificates && certificates.length" class="table-frame">
+            <div
+                v-if="certificates && certificates.length"
+                class="table-frame cert-table-frame"
+            >
                 <table
-                    class="data-table"
+                    class="data-table record-table cert-table"
+                    role="table"
                     :aria-label="t('certs.certificates.listLabel')"
                 >
-                    <thead>
-                        <tr>
-                            <th>
+                    <thead role="rowgroup">
+                        <tr role="row">
+                            <th scope="col" role="columnheader">
                                 {{ t('certs.certificates.columns.domains') }}
                             </th>
-                            <th>
+                            <th scope="col" role="columnheader">
                                 {{ t('certs.certificates.columns.status') }}
                             </th>
-                            <th>{{ t('certs.certificates.meta.issuer') }}</th>
-                            <th>{{ t('certs.certificates.meta.notAfter') }}</th>
-                            <th>{{ t('certs.certificates.meta.renewAt') }}</th>
-                            <th>
+                            <th scope="col" role="columnheader">
+                                {{ t('certs.certificates.meta.issuer') }}
+                            </th>
+                            <th scope="col" role="columnheader">
+                                {{ t('certs.certificates.meta.notAfter') }}
+                            </th>
+                            <th scope="col" role="columnheader">
+                                {{ t('certs.certificates.meta.renewAt') }}
+                            </th>
+                            <th scope="col" role="columnheader">
                                 {{ t('certs.certificates.columns.actions') }}
                             </th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody role="rowgroup">
                         <template
                             v-for="certificate in certificates"
                             :key="certificate.id"
                         >
-                            <tr :data-certificate-id="certificate.id">
-                                <td>
+                            <tr
+                                :data-certificate-id="certificate.id"
+                                role="row"
+                            >
+                                <td class="record-cell-wide" role="cell">
                                     <div class="node-name">
                                         <span
                                             class="node-dot"
@@ -729,7 +741,7 @@ onBeforeUnmount(() => {
                                         </div>
                                     </div>
                                 </td>
-                                <td>
+                                <td class="record-cell-wide" role="cell">
                                     <span class="cert-tags">
                                         <ElTag
                                             :type="state(certificate).tag"
@@ -752,20 +764,43 @@ onBeforeUnmount(() => {
                                         >
                                     </span>
                                 </td>
-                                <td class="cell-mono">
+                                <td class="cell-mono" role="cell">
+                                    <span
+                                        class="record-label"
+                                        aria-hidden="true"
+                                        >{{
+                                            t('certs.certificates.meta.issuer')
+                                        }}</span
+                                    >
                                     {{
                                         certificate.issuer ??
                                         t('certs.certificates.meta.none')
                                     }}
                                 </td>
-                                <td class="cell-mono">
+                                <td class="cell-mono" role="cell">
+                                    <span
+                                        class="record-label"
+                                        aria-hidden="true"
+                                        >{{
+                                            t(
+                                                'certs.certificates.meta.notAfter',
+                                            )
+                                        }}</span
+                                    >
                                     {{
                                         certificate.notAfter
                                             ? formatDate(certificate.notAfter)
                                             : t('certs.certificates.meta.none')
                                     }}
                                 </td>
-                                <td class="cell-mono">
+                                <td class="cell-mono" role="cell">
+                                    <span
+                                        class="record-label"
+                                        aria-hidden="true"
+                                        >{{
+                                            t('certs.certificates.meta.renewAt')
+                                        }}</span
+                                    >
                                     {{
                                         certificate.notAfter &&
                                         certificate.renewAt
@@ -773,7 +808,7 @@ onBeforeUnmount(() => {
                                             : t('certs.certificates.meta.none')
                                     }}
                                 </td>
-                                <td>
+                                <td class="record-cell-wide" role="cell">
                                     <div class="row-actions">
                                         <ElButton
                                             size="small"
@@ -794,6 +829,7 @@ onBeforeUnmount(() => {
                                         ><ElButton
                                             v-if="deleting !== certificate.id"
                                             size="small"
+                                            type="danger"
                                             :disabled="busy"
                                             @click="openDelete(certificate)"
                                             >{{
@@ -809,8 +845,9 @@ onBeforeUnmount(() => {
                                 <tr
                                     v-if="deleting === certificate.id"
                                     class="row-form"
+                                    role="row"
                                 >
-                                    <td colspan="6">
+                                    <td colspan="6" role="cell">
                                         <p class="auth-description">
                                             {{
                                                 t(

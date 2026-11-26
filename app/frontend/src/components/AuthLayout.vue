@@ -1,57 +1,62 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { onBeforeUnmount, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import LabGlobe from '@/components/LabGlobe.vue'
+import { useRoute } from 'vue-router'
+import { animate, motion } from 'motion-v'
+import { useInterfaceMotion } from '@/composables/useInterfaceMotion'
 import { usePreferencesStore } from '@/stores/preferences'
 import { useModeToggle } from '@/composables/useModeToggle'
 import { currentLocale, messages, supportedLocales, type Locale } from '@/i18n'
-import { formatClock } from '@/i18n/format'
 import { enteringConsole } from '@/composables/useSignInExit'
 
 const { t } = useI18n()
 const route = useRoute()
 const preferences = usePreferencesStore()
 const mode = useModeToggle()
+const { reduceMotion } = useInterfaceMotion()
+const panel = useTemplateRef<HTMLDivElement>('panel')
 const version = __APP_VERSION__
+
+watch(
+    [panel, () => route.path, reduceMotion],
+    ([element, path, reduced], previous, onCleanup) => {
+        if (
+            !element ||
+            reduced ||
+            (element === previous[0] && path === previous[1])
+        )
+            return
+        const entry = animate(
+            element,
+            { opacity: [0, 1], y: [24, 0] },
+            { duration: 0.32, ease: 'easeOut' },
+        )
+        onCleanup(() => {
+            entry.complete()
+        })
+    },
+    { flush: 'post' },
+)
 
 function chooseLocale(locale: Locale) {
     preferences.locale = locale
 }
 
-const now = ref(Date.now())
-let clock: ReturnType<typeof setInterval> | undefined
-onMounted(() => {
-    clock = setInterval(() => {
-        now.value = Date.now()
-    }, 1000)
-})
 onBeforeUnmount(() => {
-    clearInterval(clock)
     enteringConsole.value = false
 })
 </script>
 
 <template>
     <div class="auth-shell" :class="{ 'is-entering': enteringConsole }">
-        <LabGlobe />
-        <span class="frame-corner top-left" aria-hidden="true"></span>
-        <span class="frame-corner top-right" aria-hidden="true"></span>
-        <span class="frame-corner bottom-left" aria-hidden="true"></span>
-        <span class="frame-corner bottom-right" aria-hidden="true"></span>
         <header class="auth-top">
             <div class="auth-brand">
                 <img src="/favicon.svg" width="28" height="28" alt="" />
                 <strong>{{ t('common.app.name') }}</strong>
-                <p class="readout">
-                    {{ t('common.shell.version', { version }) }} ·
-                    {{ t('auth.layout.meta') }} ·
-                    <time>{{ formatClock(now) }}</time>
-                </p>
             </div>
             <div class="auth-tools">
                 <div
-                    class="segmented"
+                    class="auth-languages"
                     role="group"
                     :aria-label="t('common.shell.language')"
                 >
@@ -64,12 +69,25 @@ onBeforeUnmount(() => {
                         :aria-pressed="currentLocale === locale"
                         @click="chooseLocale(locale)"
                     >
-                        {{ messages[locale].common.language.short }}
+                        <motion.span
+                            v-if="currentLocale === locale"
+                            class="auth-language-selection"
+                            :layout-id="
+                                reduceMotion
+                                    ? undefined
+                                    : 'auth-language-selection'
+                            "
+                            :transition="{ duration: 0.22, ease: 'easeOut' }"
+                            aria-hidden="true"
+                        />
+                        <span class="auth-language-label">{{
+                            messages[locale].common.language.short
+                        }}</span>
                     </button>
                 </div>
                 <button
                     type="button"
-                    class="icon-button framed"
+                    class="icon-button auth-mode"
                     :aria-label="mode.label.value"
                     :title="mode.label.value"
                     @click="mode.toggle"
@@ -79,24 +97,25 @@ onBeforeUnmount(() => {
             </div>
         </header>
         <main id="main-content" class="auth-main" tabindex="-1">
-            <div class="auth-card" :inert="enteringConsole">
-                <span class="hazard-strip" aria-hidden="true"></span>
-                <slot />
+            <div ref="panel" class="auth-panel">
+                <div class="auth-access">
+                    <div class="auth-card" :inert="enteringConsole">
+                        <slot />
+                    </div>
+                    <p class="auth-entering" role="status">
+                        {{ enteringConsole ? t('auth.layout.entering') : '' }}
+                    </p>
+                </div>
+                <div class="auth-art" aria-hidden="true">
+                    <div class="auth-art-mark">
+                        <img src="/favicon.svg" width="48" height="48" alt="" />
+                    </div>
+                </div>
             </div>
-            <p class="auth-entering readout" role="status">
-                {{ enteringConsole ? t('auth.layout.entering') : '' }}
-            </p>
         </main>
         <footer class="auth-bottom">
-            <span class="readout"
-                ><span class="live-dot" aria-hidden="true"></span>
-                {{
-                    route.name === 'verify'
-                        ? t('auth.layout.statusVerify')
-                        : t('auth.layout.status')
-                }}</span
-            >
-            <span class="readout">{{ t('auth.layout.footer') }}</span>
+            <p>{{ t('auth.layout.footer') }}</p>
+            <p>{{ t('common.shell.version', { version }) }}</p>
         </footer>
     </div>
 </template>

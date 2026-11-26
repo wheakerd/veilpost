@@ -387,7 +387,6 @@ onBeforeUnmount(() => {
 <template>
     <div>
         <PageIntro
-            :eyebrow="t('common.shell.groups.workspace')"
             :title="t('common.routes.nodes')"
             :description="t('nodes.description')"
         >
@@ -540,21 +539,37 @@ onBeforeUnmount(() => {
             </p>
 
             <div v-if="nodes && nodes.length" class="table-frame">
-                <table class="data-table" :aria-label="t('nodes.listLabel')">
-                    <thead>
-                        <tr>
-                            <th>{{ t('nodes.columns.name') }}</th>
-                            <th>{{ t('nodes.columns.status') }}</th>
-                            <th>{{ t('nodes.columns.id') }}</th>
-                            <th>{{ t('nodes.meta.agentVersion') }}</th>
-                            <th>{{ t('nodes.meta.createdAt') }}</th>
-                            <th>{{ t('nodes.columns.actions') }}</th>
+                <table
+                    class="data-table record-table nodes-table"
+                    role="table"
+                    :aria-label="t('nodes.listLabel')"
+                >
+                    <thead role="rowgroup">
+                        <tr role="row">
+                            <th scope="col" role="columnheader">
+                                {{ t('nodes.columns.name') }}
+                            </th>
+                            <th scope="col" role="columnheader">
+                                {{ t('nodes.columns.status') }}
+                            </th>
+                            <th scope="col" role="columnheader">
+                                {{ t('nodes.columns.id') }}
+                            </th>
+                            <th scope="col" role="columnheader">
+                                {{ t('nodes.meta.agentVersion') }}
+                            </th>
+                            <th scope="col" role="columnheader">
+                                {{ t('nodes.meta.createdAt') }}
+                            </th>
+                            <th scope="col" role="columnheader">
+                                {{ t('nodes.columns.actions') }}
+                            </th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody role="rowgroup">
                         <template v-for="node in nodes" :key="node.id">
-                            <tr :data-node-id="node.id">
-                                <td>
+                            <tr :data-node-id="node.id" role="row">
+                                <td class="record-cell-wide" role="cell">
                                     <div class="node-name">
                                         <span
                                             class="node-dot"
@@ -585,36 +600,60 @@ onBeforeUnmount(() => {
                                         </div>
                                     </div>
                                 </td>
-                                <td>
+                                <td class="record-cell-wide" role="cell">
                                     <ElTag :type="state(node).tag">{{
                                         state(node).label
                                     }}</ElTag>
                                 </td>
-                                <td class="cell-mono">
-                                    {{ node.id
-                                    }}<button
-                                        type="button"
-                                        class="copy-button"
-                                        :aria-label="
-                                            t('nodes.copyId', {
-                                                name: node.name,
-                                            })
-                                        "
-                                        @click="copy(node.id)"
+                                <td
+                                    class="cell-mono record-cell-wide"
+                                    role="cell"
+                                >
+                                    <span
+                                        class="record-label"
+                                        aria-hidden="true"
+                                        >{{ t('nodes.columns.id') }}</span
                                     >
-                                        <Copy aria-hidden="true" />
-                                    </button>
+                                    <span class="node-identifier">
+                                        <span>{{ node.id }}</span><button
+                                            type="button"
+                                            class="copy-button"
+                                            :aria-label="
+                                                t('nodes.copyId', {
+                                                    name: node.name,
+                                                })
+                                            "
+                                            @click="copy(node.id)"
+                                        >
+                                            <Copy aria-hidden="true" />
+                                        </button>
+                                    </span>
                                 </td>
-                                <td class="cell-mono">
+                                <td class="cell-mono" role="cell">
+                                    <span
+                                        class="record-label"
+                                        aria-hidden="true"
+                                        >{{
+                                            t('nodes.meta.agentVersion')
+                                        }}</span
+                                    >
                                     {{
                                         node.agentVersion ??
                                         t('nodes.meta.unknown')
                                     }}
                                 </td>
-                                <td class="cell-mono">
+                                <td class="cell-mono" role="cell">
+                                    <span
+                                        class="record-label"
+                                        aria-hidden="true"
+                                        >{{ t('nodes.meta.createdAt') }}</span
+                                    >
                                     {{ formatDateTime(node.createdAt) }}
                                 </td>
-                                <td>
+                                <td
+                                    class="record-cell-wide node-actions-cell"
+                                    role="cell"
+                                >
                                     <div
                                         v-if="action?.node.id !== node.id"
                                         class="row-actions"
@@ -664,8 +703,9 @@ onBeforeUnmount(() => {
                                 <tr
                                     v-if="action?.node.id === node.id"
                                     class="row-form"
+                                    role="row"
                                 >
-                                    <td colspan="6">
+                                    <td colspan="6" role="cell">
                                         <form
                                             class="node-revoke security-form auth-form"
                                             :aria-busy="busy"
@@ -761,3 +801,26 @@ onBeforeUnmount(() => {
         <p class="inline-note">{{ t('nodes.note') }}</p>
     </div>
 </template>
+
+<style scoped lang="scss">
+@media (max-width: 47.5rem) {
+    .nodes-table {
+        .node-actions-cell:empty {
+            display: none;
+        }
+
+        .node-identifier {
+            display: flex;
+            align-items: center;
+            gap: var(--app-space-8);
+
+            .copy-button {
+                width: max(44px, 2.75rem);
+                height: max(44px, 2.75rem);
+                margin: 0;
+                flex-shrink: 0;
+            }
+        }
+    }
+}
+</style>

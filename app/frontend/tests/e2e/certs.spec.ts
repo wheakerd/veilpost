@@ -181,7 +181,7 @@ test('DNS credentials are write-only and never shown again', async ({
     await credentialRow(page, credentialId)
         .getByRole('button', { name: '删除' })
         .click()
-    await page.getByLabel('当前密码', { exact: true }).fill(account.password)
+    await row.getByLabel('当前密码', { exact: true }).fill(account.password)
     await page.getByRole('button', { name: '确认删除' }).click()
     await expect(page.getByText(`凭据“${name}-renamed”已删除`)).toBeVisible()
     await expect(credentialRow(page, credentialId)).toHaveCount(0)
@@ -366,7 +366,7 @@ test('credentials used by a certificate cannot be deleted', async ({
 test('certificate requests validate input and show the real issuance state', async ({
     page,
     account,
-}) => {
+}, testInfo) => {
     await signIn(page, account)
     const credentialName = unique('e2e-cert')
     const credentialId = await createCredential(
@@ -393,7 +393,7 @@ test('certificate requests validate input and show the real issuance state', asy
     await expect(page.getByText(/^域名格式不正确/)).toBeVisible()
 
     // Custom directories must use https://.
-    const domain = `${unique('e2e')}.example.com`
+    const domain = `${unique('e2e')}.edge-platform-west-europe-disaster-recovery-gateway.example.com`
     await page
         .getByLabel('域名', { exact: true })
         .fill(`${domain}\n*.${domain}`)
@@ -429,6 +429,19 @@ test('certificate requests validate input and show the real issuance state', asy
     await expect(row.getByTestId('certificate-error')).toContainText(
         '无法连接 ACME 服务，请检查目录地址与网络。',
     )
+    if (testInfo.project.name === 'mobile') {
+        await page.setViewportSize({ width: 320, height: 740 })
+        const frame = page.locator('.cert-table-frame')
+        await expect
+            .poll(() =>
+                frame.evaluate(
+                    (element) => element.scrollWidth - element.clientWidth,
+                ),
+            )
+            .toBe(0)
+        const action = row.getByRole('button', { name: '重新签发' })
+        expect((await action.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    }
     await expect(row.getByRole('button', { name: '下载证书链' })).toHaveCount(0)
     await noStoredSecrets(page, account)
     const storage = await page.evaluate(() =>

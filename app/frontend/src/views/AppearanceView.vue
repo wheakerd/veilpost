@@ -9,12 +9,11 @@ const { t } = useI18n()
 <template>
     <div>
         <PageIntro
-            :eyebrow="t('common.shell.groups.settings')"
             :title="t('common.routes.appearance')"
             :description="t('appearance.description')"
         />
         <section
-            class="plain-panel preferences-page"
+            class="preferences-page"
             :aria-label="t('common.routes.appearance')"
         >
             <PreferencesPanel id-prefix="page-preferences" />

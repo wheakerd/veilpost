@@ -64,22 +64,63 @@ test('real login protects deep links, shows progress and restores sessions after
     page,
     account,
 }, testInfo) => {
-    await page.goto('/nodes?view=list')
+    // Measure what the browser displays, including on the fast signed-in reload.
+    await page.addInitScript(() => {
+        let shown = false
+        const observer = new MutationObserver(() => {
+            if (!shown && document.querySelector('.boot-loading')) {
+                shown = true
+                performance.mark('test-boot-visible')
+            }
+            if (shown && document.querySelector('.auth-shell, .app-shell')) {
+                performance.measure('test-boot-to-page', 'test-boot-visible')
+                observer.disconnect()
+            }
+        })
+        observer.observe(document, { childList: true, subtree: true })
+    })
+    const splashDuration = () =>
+        page.evaluate(
+            () =>
+                performance.getEntriesByName('test-boot-to-page')[0]
+                    ?.duration ?? 0,
+        )
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    const network = await page.context().newCDPSession(page)
+    await network.send('Network.enable')
+    const setLatency = (latency: number) =>
+        network.send('Network.emulateNetworkConditions', {
+            offline: false,
+            latency,
+            downloadThroughput: -1,
+            uploadThroughput: -1,
+        })
+    await setLatency(1000)
+    await page.goto('/nodes?view=list', { waitUntil: 'commit' })
+    const splash = page.locator('.boot-loading')
+    await expect(splash).toBeVisible()
+    const ring = await splash.locator('.boot-emblem').evaluate((el) => {
+        const style = getComputedStyle(el, '::after')
+        return [style.animationName, style.animationDuration]
+    })
+    expect(ring).toEqual(['boot-turn', '1s'])
+    await page.evaluate(() => window.veilpostBootMinimum)
+    await expect(splash).toBeVisible()
+    await expect(page.locator('.app-shell, .auth-shell')).toHaveCount(0)
+    await expect(splash).toHaveText('正在载入控制台')
+    await splash.screenshot({
+        path: testInfo.outputPath('session-loading.png'),
+    })
     await expect(page).toHaveURL(/\/login\?redirect=/)
+    await expect.poll(splashDuration).toBeGreaterThanOrEqual(2000)
+    await setLatency(0)
     await expect(page.getByRole('navigation', { name: '主导航' })).toHaveCount(
         0,
     )
     await login(page, account, 'incorrect-password')
     await expect(page.getByRole('alert')).toContainText('账号或密码不正确')
     await expect(page.getByLabel('密码', { exact: true })).toHaveValue('')
-    const network = await page.context().newCDPSession(page)
-    await network.send('Network.enable')
-    await network.send('Network.emulateNetworkConditions', {
-        offline: false,
-        latency: 500,
-        downloadThroughput: -1,
-        uploadThroughput: -1,
-    })
+    await setLatency(500)
     await login(page, account)
     await expect(
         page.getByRole('button', { name: '正在登录…', exact: true }),
@@ -89,22 +130,43 @@ test('real login protects deep links, shows progress and restores sessions after
         fullPage: true,
     })
     await expect(page).toHaveURL('http://127.0.0.1:4173/nodes?view=list')
-    await network.send('Network.emulateNetworkConditions', {
-        offline: false,
-        latency: 0,
-        downloadThroughput: -1,
-        uploadThroughput: -1,
-    })
-    await page.reload()
+    await setLatency(0)
+    await page.reload({ waitUntil: 'commit' })
+    await expect(splash).toBeVisible()
     await expect(
         page.getByText(account.username, { exact: true }),
     ).toBeVisible()
+    expect(await splashDuration()).toBeGreaterThanOrEqual(2000)
     await noStoredSecrets(page, account)
+    await expect(page.locator('#main-content')).toHaveAttribute(
+        'aria-busy',
+        'false',
+    )
+    const progressHistory = await page.evaluateHandle(() => {
+        const states = [false]
+        const observer = new MutationObserver(() => {
+            const shown = document.querySelector('.request-progress') !== null
+            if (shown !== states.at(-1)) states.push(shown)
+        })
+        observer.observe(document.body, { subtree: true, childList: true })
+        return { states, observer }
+    })
+    await setLatency(500)
     await page
         .getByRole('navigation', { name: '主导航' })
         .getByRole('link', { name: '账号安全', exact: true })
         .click()
+    const progress = page.locator('.request-progress')
+    await expect(progress).toBeVisible()
     await expect(page).toHaveURL('http://127.0.0.1:4173/settings/security')
+    await expect(progress).toHaveCount(0)
+    expect(
+        await progressHistory.evaluate(({ states, observer }) => {
+            observer.disconnect()
+            return states
+        }),
+    ).toEqual([false, true, false])
+    await setLatency(0)
     await signOut(page)
     await expect(page).toHaveURL('http://127.0.0.1:4173/login')
     await page.goBack()
@@ -116,7 +178,7 @@ test('real login protects deep links, shows progress and restores sessions after
 test('real MFA challenge survives refresh and requires a valid TOTP', async ({
     page,
     account,
-}) => {
+}, testInfo) => {
     const mfa = await enableMfa(page, account)
     await page.goto('/nodes')
     await login(page, account)
@@ -124,6 +186,19 @@ test('real MFA challenge survives refresh and requires a valid TOTP', async ({
     await page.reload()
     await page.goto('/settings/security')
     await expect(page).toHaveURL(/\/login\/verify/)
+    await expect(page.getByLabel('验证码', { exact: true })).toBeVisible()
+    await expect(page.locator('.route-content')).toHaveCSS('opacity', '1')
+    for (const colorScheme of ['light', 'dark'] as const) {
+        await page.emulateMedia({ colorScheme })
+        await expect(page.locator('html')).toHaveCSS(
+            'color-scheme',
+            colorScheme,
+        )
+        await page.screenshot({
+            path: testInfo.outputPath(`verification-${colorScheme}.png`),
+            animations: 'disabled',
+        })
+    }
     await page.getByLabel('验证码', { exact: true }).fill('123')
     await page.getByRole('button', { name: '验证并登录' }).click()
     await expect(page.getByRole('alert')).toContainText('6 位数字')
@@ -191,8 +266,8 @@ test('sign-in feedback reports Caps Lock, shakes on rejection, fills code cells 
     await expect(page.locator('.code-cell')).toHaveText(value.split(''))
     await page.getByRole('button', { name: '验证并登录' }).click()
     await expect(page.getByText('验证通过，正在继续…')).toBeVisible()
-    await expect(page.getByText('正在进入控制台…')).toBeVisible()
     await expect(page).toHaveURL('http://127.0.0.1:4173/')
+    await expect(page.getByRole('navigation', { name: '主导航' })).toBeVisible()
 })
 
 test('recovery codes are consumed by the real backend exactly once', async ({

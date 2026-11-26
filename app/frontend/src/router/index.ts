@@ -1,5 +1,9 @@
-import { watchEffect } from 'vue'
-import { createRouter, createWebHistory } from 'vue-router'
+import { computed, nextTick, shallowRef, watchEffect } from 'vue'
+import {
+    createRouter,
+    createWebHistory,
+    type RouteLocationNormalized,
+} from 'vue-router'
 import type { MessageSchema } from '@/locales/zh-CN'
 import { i18n } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -55,6 +59,7 @@ export const router = createRouter({
             path: '/apps/:id',
             name: 'app',
             component: () => import('@/views/AppView.vue'),
+            props: true,
             meta: { title: 'installedApp' },
         },
         {
@@ -98,7 +103,13 @@ export const router = createRouter({
 // within this window, which keeps rapid page changes free of extra requests.
 const sessionRecheckInterval = 15_000
 
+const pendingRoute = shallowRef<RouteLocationNormalized>()
+export const navigationPending = computed(
+    () => pendingRoute.value !== undefined,
+)
+
 router.beforeEach(async (to, from) => {
+    pendingRoute.value = to
     if (from.matched.length) pageScroll.set(from.path, readScroll())
     const auth = useAuthStore()
     await auth.restore(sessionRecheckInterval)
@@ -116,6 +127,20 @@ router.beforeEach(async (to, from) => {
     }
     if (to.name !== 'login') return { path: '/login', query: { redirect } }
     return
+})
+
+function finishNavigation(to: RouteLocationNormalized) {
+    if (pendingRoute.value === to || pendingRoute.value === to.redirectedFrom)
+        pendingRoute.value = undefined
+}
+
+router.afterEach(async (to) => {
+    // The destination can start its own requests when Vue mounts it.
+    await nextTick()
+    finishNavigation(to)
+})
+router.onError((_, to) => {
+    finishNavigation(to)
 })
 
 // Follows both the current route and the interface language.

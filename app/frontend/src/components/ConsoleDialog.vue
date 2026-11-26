@@ -57,11 +57,7 @@ watch(
     --el-dialog-padding-primary: 0;
     overflow: hidden;
     border-radius: var(--app-radius-card);
-    background-color: color-mix(
-        in srgb,
-        var(--app-raised) 62%,
-        var(--app-sheet-fill-strong)
-    );
+    background-color: var(--app-dialog-fill);
 
     .el-dialog__header {
         position: absolute;
@@ -79,10 +75,10 @@ watch(
         place-items: center;
         width: 2rem;
         height: 2rem;
-        border: 1px solid var(--app-border-strong);
+        border: var(--app-border-width) solid var(--app-border-strong);
         border-radius: var(--app-radius-capsule);
         background: var(--app-raised);
-        font-size: 1rem;
+        font-size: var(--app-font-size-base);
 
         .el-dialog__close {
             color: var(--app-text);
@@ -120,8 +116,8 @@ watch(
 .console-dialog-sidebar {
     overflow: auto;
     overscroll-behavior: contain;
-    border-inline-end: 1px solid var(--app-border);
-    background: color-mix(in srgb, var(--app-primary) 14%, var(--app-surface));
+    border-inline-end: var(--app-border-width) solid var(--app-border);
+    background: var(--app-surface);
 }
 
 .console-dialog-main {
@@ -132,17 +128,17 @@ watch(
 .console-dialog-heading {
     flex-shrink: 0;
     margin: 0;
-    padding: 1.5rem 4rem 1.25rem 1.5rem;
+    padding: var(--app-space-24) 4rem var(--app-space-20) var(--app-space-24);
     color: var(--app-text);
-    font-size: 1.125rem;
-    font-weight: 600;
+    font-size: var(--app-font-size-heading);
+    font-weight: var(--app-font-weight-semibold);
     line-height: 1.35;
     overflow-wrap: anywhere;
 }
 
 .console-dialog-content {
     flex: 1;
-    padding: 0 1.5rem 1.5rem;
+    padding: 0 var(--app-space-24) var(--app-space-24);
     overflow: auto;
     overscroll-behavior: contain;
 }
@@ -162,15 +158,15 @@ watch(
     .console-dialog-sidebar {
         max-block-size: 50dvh;
         border-inline-end: 0;
-        border-block-end: 1px solid var(--app-border);
+        border-block-end: var(--app-border-width) solid var(--app-border);
     }
 
     .console-dialog-heading {
-        padding: 1rem 3.5rem 0.9rem 1rem;
+        padding: var(--app-space-16) 3.5rem 0.9rem var(--app-space-16);
     }
 
     .console-dialog-content {
-        padding: 0 1rem 1rem;
+        padding: 0 var(--app-space-16) var(--app-space-16);
     }
 }
 </style>

@@ -1,21 +1,11 @@
 import { ref } from 'vue'
 
-// Leaving the sign-in frame for the console. The column dissolves and the
-// globe gathers behind "Entering the console…" for at least this long, so
-// the step reads as an arrival rather than a cut; reduced motion skips it.
-const hold = 560
-
 // Read by AuthLayout, which owns the look of the exit.
 export const enteringConsole = ref(false)
 
-export async function enterConsole(
-    reduceMotion: boolean,
-    navigate: () => Promise<unknown>,
-) {
+export async function enterConsole(navigate: () => Promise<unknown>) {
     enteringConsole.value = true
     try {
-        if (!reduceMotion)
-            await new Promise((resolve) => setTimeout(resolve, hold))
         // A refused or failed navigation returns the form.
         if (await navigate()) enteringConsole.value = false
     } catch (cause) {

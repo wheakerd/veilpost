@@ -161,7 +161,7 @@ test('creating a node shows a one-time enrollment token that never persists', as
     page.on('console', (message) => consoleText.push(message.text()))
     await page.goto('/nodes')
     await expect(page.getByRole('heading', { name: '节点列表' })).toBeVisible()
-    const name = nodeName()
+    const name = `eu-central-gateway-platform-transit-redundancy-${nodeName()}`
 
     await createNode(page, name, 'not-the-current-password')
     await expect(page.getByText('当前密码不正确，请重新输入。')).toBeVisible()
@@ -203,6 +203,25 @@ test('creating a node shows a one-time enrollment token that never persists', as
     // Reloading never brings the token back.
     await page.reload()
     await expect(row(page, name)).toContainText('等待注册')
+    if (testInfo.project.name === 'mobile') {
+        await page.setViewportSize({ width: 320, height: 740 })
+        const frame = page.locator('.table-frame')
+        await expect
+            .poll(() =>
+                frame.evaluate(
+                    (element) => element.scrollWidth - element.clientWidth,
+                ),
+            )
+            .toBe(0)
+        const action = row(page, name).getByRole('button', {
+            name: '重新签发令牌',
+        })
+        expect((await action.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+        await page.screenshot({
+            path: testInfo.outputPath('mobile-node-records.png'),
+            animations: 'disabled',
+        })
+    }
     expect(await page.content()).not.toContain(token)
     await expectNoToken(page, account, token)
     expect(consoleText.join('\n')).not.toContain(token)
