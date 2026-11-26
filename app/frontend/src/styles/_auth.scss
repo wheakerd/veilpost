@@ -200,6 +200,10 @@ main.auth-main {
     .field-label-row {
         flex-wrap: wrap;
         gap: 0 var(--app-space-8);
+        > label {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
     }
     label {
         font-size: var(--app-font-size-small);

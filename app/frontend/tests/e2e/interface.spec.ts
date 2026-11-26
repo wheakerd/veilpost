@@ -239,17 +239,28 @@ test('the narrow tab bar lens follows a drag and opens the tab it is thrown to',
 
 test('the top bar lifts only while content passes beneath it', async ({
     page,
-}) => {
-    await page.goto('/store')
+}, testInfo) => {
+    await page.goto('/settings/appearance')
+    await expect(
+        page.getByRole('heading', { name: '偏好设置', exact: true }),
+    ).toBeVisible()
     const topbar = page.locator('.topbar')
     const shadow = () =>
         topbar.evaluate((element) => getComputedStyle(element).boxShadow)
+    const scrollOffset = () =>
+        testInfo.project.name === 'mobile'
+            ? page.evaluate(() => window.scrollY)
+            : page
+                  .locator('#main-content')
+                  .evaluate((element) => element.scrollTop)
     await expect(topbar).not.toHaveAttribute('data-scrolled')
     const resting = await shadow()
     await scrollPage(page, 240)
+    await expect.poll(scrollOffset).toBeGreaterThan(0)
     await expect(topbar).toHaveAttribute('data-scrolled', '')
     await expect.poll(shadow).not.toBe(resting)
     await scrollPage(page, 0)
+    await expect.poll(scrollOffset).toBe(0)
     await expect(topbar).not.toHaveAttribute('data-scrolled')
     await expect.poll(shadow).toBe(resting)
 })
@@ -435,7 +446,10 @@ test('on wide screens only the page panel scrolls and keeps its place per page',
         'narrow screens scroll the window',
     )
     await page.setViewportSize({ width: 1280, height: 640 })
-    await page.goto('/store')
+    await page.goto('/settings/appearance')
+    await expect(
+        page.getByRole('heading', { name: '偏好设置', exact: true }),
+    ).toBeVisible()
     const main = page.locator('#main-content')
     const sidebar = page.locator('.sidebar')
     const topbar = page.locator('.topbar')
@@ -459,11 +473,17 @@ test('on wide screens only the page panel scrolls and keeps its place per page',
         .getByRole('link', { name: 'VPN 节点', exact: true })
         .click()
     await expect(page).toHaveURL(/\/nodes$/)
+    await expect(
+        page.getByRole('heading', { name: 'VPN 节点', exact: true }),
+    ).toBeVisible()
+    await expect
+        .poll(() => main.evaluate((element) => element.scrollTop))
+        .toBe(0)
     await page
         .getByRole('navigation', { name: '已打开的页面' })
-        .getByRole('link', { name: '软件商店' })
+        .getByRole('link', { name: '偏好设置', exact: true })
         .click()
-    await expect(page).toHaveURL(/\/store$/)
+    await expect(page).toHaveURL(/\/settings\/appearance$/)
     await expect
         .poll(() => main.evaluate((element) => element.scrollTop))
         .toBe(left)
